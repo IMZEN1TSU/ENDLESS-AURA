@@ -1,4 +1,4 @@
--- LocalScript (Modified for Endless Aura Integration)
+-- LocalScript (Fully Fixed - Smooth Animations)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -32,7 +32,7 @@ local ADIDAS_PACK = {
 }
 
 local isAnimOn = false
-local defaultAnims = {} -- Backup default IDs
+local defaultAnims = {}
 
 -- ========================================================
 -- ANTI-OVERLAP & RE-EXECUTION SYSTEM
@@ -41,7 +41,7 @@ if _G.AuraKillSwitch then
     _G.AuraKillSwitch()
 end
 
--- Fresh state setup (Default ON)
+-- Fresh state setup (Default ON for Anim, Aura, Tags | OFF for Spam)
 _G.AuraState = {
     tagsEnabled = true,   
     auraEnabled = true,   
@@ -57,7 +57,6 @@ local isScriptAlive = true
 _G.AuraKillSwitch = function()
     isScriptAlive = false
     
-    -- Force Stop All Active Playing Tracks
     local char = player.Character
     if char then
         local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -134,7 +133,7 @@ local function backupAnim(animObj, key)
 end
 
 -- ========================================================
--- MAIN ANIMATION TOGGLE (Integrated with AuraState)
+-- MAIN ANIMATION TOGGLE (Smooth & Clean)
 -- ========================================================
 local function toggleAnim()
     local char = player.Character or player.CharacterAdded:Wait()
@@ -142,7 +141,15 @@ local function toggleAnim()
     if not animate then return end
 
     local hum = char:FindFirstChildOfClass("Humanoid")
-    stopAllTracks(hum)
+    if hum then
+        -- Don't stop tracks abruptly, let them transition naturally
+        -- Only stop custom tracks if needed
+        for _, t in ipairs(hum:GetPlayingAnimationTracks()) do
+            if t.Animation and t.Animation.AnimationId and string.match(t.Animation.AnimationId, "138665010911335") then
+                pcall(function() t:Stop(0.1) end)
+            end
+        end
+    end
 
     local runObj   = animate:FindFirstChild("run") and animate.run:FindFirstChildOfClass("Animation")
     local walkObj  = animate:FindFirstChild("walk") and animate.walk:FindFirstChildOfClass("Animation")
@@ -182,41 +189,68 @@ local function toggleAnim()
         isAnimOn = true
         AuraState.animEnabled = true
     else
-        -- Turn OFF (Restore Backup)
-        if walkObj and defaultAnims["walk"] then walkObj.AnimationId = defaultAnims["walk"] end
-        if runObj and defaultAnims["run"] then runObj.AnimationId = defaultAnims["run"] end
-        if jumpObj and defaultAnims["jump"] then jumpObj.AnimationId = defaultAnims["jump"] end
-        if fallObj and defaultAnims["fall"] then fallObj.AnimationId = defaultAnims["fall"] end
-        if climbObj and defaultAnims["climb"] then climbObj.AnimationId = defaultAnims["climb"] end
-        if swimObj and defaultAnims["swim"] then swimObj.AnimationId = defaultAnims["swim"] end
-        if swimIdle and defaultAnims["swimidle"] then swimIdle.AnimationId = defaultAnims["swimidle"] end
+        -- Turn OFF (Restore Backup) - Smooth transition
+        if walkObj and defaultAnims["walk"] then 
+            walkObj.AnimationId = defaultAnims["walk"] 
+        end
+        if runObj and defaultAnims["run"] then 
+            runObj.AnimationId = defaultAnims["run"] 
+        end
+        if jumpObj and defaultAnims["jump"] then 
+            jumpObj.AnimationId = defaultAnims["jump"] 
+        end
+        if fallObj and defaultAnims["fall"] then 
+            fallObj.AnimationId = defaultAnims["fall"] 
+        end
+        if climbObj and defaultAnims["climb"] then 
+            climbObj.AnimationId = defaultAnims["climb"] 
+        end
+        if swimObj and defaultAnims["swim"] then 
+            swimObj.AnimationId = defaultAnims["swim"] 
+        end
+        if swimIdle and defaultAnims["swimidle"] then 
+            swimIdle.AnimationId = defaultAnims["swimidle"] 
+        end
 
         if idleFolder then
             local a1 = idleFolder:FindFirstChild("Animation1")
             local a2 = idleFolder:FindFirstChild("Animation2")
-            if a1 and defaultAnims["idle1"] then a1.AnimationId = defaultAnims["idle1"] end
-            if a2 and defaultAnims["idle2"] then a2.AnimationId = defaultAnims["idle2"] end
+            if a1 and defaultAnims["idle1"] then 
+                a1.AnimationId = defaultAnims["idle1"] 
+            end
+            if a2 and defaultAnims["idle2"] then 
+                a2.AnimationId = defaultAnims["idle2"] 
+            end
         end
         isAnimOn = false
         AuraState.animEnabled = false
     end
 
-    -- Refresh Character Animate
+    -- Gentle refresh - don't disrupt player state
     animate.Disabled = true
-    task.wait(0.06)
+    task.wait(0.05)
     animate.Disabled = false
-
+    
+    -- Small delay to let animations register
+    task.wait(0.1)
+    
     if hum then
-        pcall(function()
+        -- Force a small state change to refresh animations
+        local currentState = hum:GetState()
+        if currentState == Enum.HumanoidStateType.Running then
             hum:ChangeState(Enum.HumanoidStateType.Landed)
-            task.wait(0.03)
+            task.wait(0.05)
             hum:ChangeState(Enum.HumanoidStateType.Running)
-        end)
+        elseif currentState == Enum.HumanoidStateType.Landed then
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+            task.wait(0.05)
+            hum:ChangeState(Enum.HumanoidStateType.Landed)
+        end
     end
 end
 
 -- ========================================================
--- HUD BAR LAYOUT (Modified to use Adidas toggle)
+-- HUD BAR LAYOUT
 -- ========================================================
 if playerGui and playerGui:FindFirstChild("AuraHUD") then
     playerGui:FindFirstChild("AuraHUD"):Destroy()
@@ -363,10 +397,10 @@ local function createBox(name, text, withDot, interactive)
 end
 
 -- ========================================================
--- HUD TOGGLES (Using integrated animation system)
+-- HUD TOGGLES
 -- ========================================================
 
--- Tags Toggle
+-- Tags Toggle (ON by default)
 local _, tagsLabel, tagsDot = createBox("TagsToggle", "Tᴀɢs Øɴ", true, true)
 tagsLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -383,7 +417,7 @@ tagsLabel.MouseButton1Click:Connect(function()
     end
 end)
 
--- Aura Toggle
+-- Aura Toggle (ON by default)
 local _, auraLabel, auraDot = createBox("AuraToggle", "Aᴜʀᴀ Øɴ", true, true)
 auraLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -409,38 +443,22 @@ local _, pingLabel = createBox("Ping", "Pɪɴɢ: --ᴍs", false, false)
 local _, timeLabel = createBox("Time", "--:--", false, false)
 
 -- ========================================================
--- ANIMATION TOGGLE (Now controls Adidas Animation Pack)
+-- ANIMATION TOGGLE (ON by default - Smooth)
 -- ========================================================
 local _, animLabel, animDot = createBox("AnimToggle", "Aɴɪᴍ Øɴ", true, true)
 
--- This is the main toggle that handles the Adidas Animation pack
 animLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
     playCustomSound(107406973902030)
     
-    -- Toggle the animation using the integrated system
     toggleAnim()
     
-    -- Update HUD state
     animLabel.Text = isAnimOn and "Aɴɪᴍ Øɴ" or "Aɴɪᴍ Øғғ"
     animDot.BackgroundColor3 = isAnimOn and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
     AuraState.animEnabled = isAnimOn
 end)
 
--- Initialize animation state from AuraState
-if AuraState.animEnabled then
-    isAnimOn = true
-    animLabel.Text = "Aɴɪᴍ Øɴ"
-    animDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-    -- Apply animations if character exists
-    task.spawn(function()
-        if player.Character then
-            toggleAnim() -- This will turn ON if not already ON
-        end
-    end)
-end
-
--- Spam Toggle
+-- Spam Toggle (OFF by default)
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
 spamLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -451,7 +469,7 @@ spamLabel.MouseButton1Click:Connect(function()
 end)
 
 -- ========================================================
--- SPAM ENGINE
+-- SPAM ENGINE (OFF by default)
 -- ========================================================
 local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
 
@@ -539,15 +557,6 @@ local function setup(character)
         end
     end
 
-    -- Thorough Animation Clean up inside the current execution
-    if AuraState.currentTrack then
-        pcall(function() 
-            AuraState.currentTrack:Stop(0) 
-            AuraState.currentTrack:Destroy()
-        end)
-        AuraState.currentTrack = nil
-    end
-
     -- ===== OVERHEAD TEXT TAG =====
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "OverheadTag"
@@ -621,7 +630,7 @@ local function setup(character)
         billboard.Enabled = AuraState.tagsEnabled
     end)
 
-    -- AURA RENDERING
+    -- ===== AURA RENDERING =====
     local function createThunder(parent, offsetY, rate, speed, size)
         if not isScriptAlive or not parent or not parent.Parent then return end
         local att = Instance.new("Attachment")
@@ -629,7 +638,6 @@ local function setup(character)
         att.Position = Vector3.new(0, offsetY, 0)
         att.Parent = parent
 
-        -- Layer 1: Thunder Lightning
         local thunder = Instance.new("ParticleEmitter")
         thunder.Parent = att
         thunder.Texture = "rbxassetid://6101261905"
@@ -660,7 +668,6 @@ local function setup(character)
         thunder.Rotation = NumberRange.new(0, 360)
         thunder.ZOffset = 0.4
 
-        -- Layer 2: Neon Core Glow
         local glow = Instance.new("ParticleEmitter")
         glow.Parent = att
         glow.Color = ColorSequence.new({
@@ -685,7 +692,6 @@ local function setup(character)
         glow.Speed = NumberRange.new(1, 2.5)
         glow.SpreadAngle = Vector2.new(360, 360)
 
-        -- Layer 3: Dark Smoke
         local smoke = Instance.new("ParticleEmitter")
         smoke.Parent = att
         smoke.Color = ColorSequence.new({
@@ -756,39 +762,9 @@ local function setup(character)
     groundThunder.Enabled = AuraState.auraEnabled
     table.insert(AuraState.emitters, groundThunder)
 
-    -- ===== IDLE ANIMATION (Original Aura Anim) =====
-    -- Now this is controlled by the Adidas toggle system
-    -- The Adidas animation will handle the idle animation
-    -- If Adidas is OFF, we fallback to original Aura idle
-    
-    if not AuraState.animEnabled then
-        -- Original Aura idle animation (fallback when Adidas is OFF)
-        local idleAnim = Instance.new("Animation")
-        idleAnim.Name = "AuraIdle"
-        idleAnim.AnimationId = "rbxassetid://138665010911335"
-
-        local idleTrack = animator:LoadAnimation(idleAnim)
-        idleTrack.Priority = Enum.AnimationPriority.Idle
-        idleTrack.Looped = true
-        AuraState.currentTrack = idleTrack
-
-        humanoid.Running:Connect(function(speed)
-            if not isScriptAlive then return end
-            if speed < 0.5 then
-                if AuraState.animEnabled and not idleTrack.IsPlaying then 
-                    idleTrack:Play(0.1) 
-                end
-            else
-                if idleTrack.IsPlaying then 
-                    idleTrack:Stop(0.1) 
-                end
-            end
-        end)
-
-        if humanoid.MoveDirection.Magnitude < 0.1 and AuraState.animEnabled then
-            idleTrack:Play(0.1)
-        end
-    end
+    -- ===== NO EXTRA IDLE ANIMATION =====
+    -- The Adidas animation system handles ALL animations now
+    -- No separate AuraIdle track to conflict
 end
 
 -- ========================================================
@@ -821,7 +797,7 @@ end)
 -- RESPAWN LOGIC FOR ADIDAS ANIMATION
 -- ========================================================
 player.CharacterAdded:Connect(function()
-    defaultAnims = {} -- reset backup on respawn
+    defaultAnims = {}
     if isAnimOn then
         isAnimOn = false
         task.wait(0.6)
@@ -830,12 +806,11 @@ player.CharacterAdded:Connect(function()
 end)
 
 -- ========================================================
--- INITIAL ADIDAS ANIMATION LOAD
+-- INITIAL ADIDAS ANIMATION LOAD (ON by default)
 -- ========================================================
--- If animation is enabled by default, apply it
 if AuraState.animEnabled then
     task.spawn(function()
-        wait(1) -- Wait for character to load
+        wait(1.5)
         if player.Character and not isAnimOn then
             toggleAnim()
         end
