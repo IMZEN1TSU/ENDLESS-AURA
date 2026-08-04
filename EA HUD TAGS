@@ -1,4 +1,4 @@
--- LocalScript (Spam Fixed - OFF by default)
+-- LocalScript (EA HUD TAGS with Cross-Player Detection)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -15,6 +15,12 @@ local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildO
 
 -- Logo Asset
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
+
+-- Signature Trigger Message
+local SCRIPT_SIGNATURE = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢 Loaded..."
+
+-- Table to store detected script users
+local DetectedScriptUsers = {}
 
 -- ========================================================
 -- ADIDAS ANIMATION PACK
@@ -35,7 +41,7 @@ local isAnimOn = false
 local defaultAnims = {}
 
 -- ========================================================
--- ANTI-OVERLAP
+-- ANTI-OVERLAP & KILLSWITCH
 -- ========================================================
 if _G.AuraKillSwitch then
     _G.AuraKillSwitch()
@@ -45,7 +51,7 @@ _G.AuraState = {
     tagsEnabled = true,   
     auraEnabled = true,   
     animEnabled = true,   
-    spamEnabled = false,  -- <-- SPAM OFF by default
+    spamEnabled = false,
     hudVisible = true,
     emitters = {},
     currentTrack = nil
@@ -80,10 +86,13 @@ _G.AuraKillSwitch = function()
         playerGui:FindFirstChild("AuraHUD"):Destroy()
     end
 
-    if char then
-        for _, child in ipairs(char:GetDescendants()) do
-            if child.Name == "EACircle" or child.Name == "OverheadTag" or child.Name == "AuraAttachment" then
-                child:Destroy()
+    -- Clean overhead tags from all players on KillSwitch
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then
+            local h = p.Character:FindFirstChild("Head")
+            if h then
+                local tag = h:FindFirstChild("OverheadTag")
+                if tag then tag:Destroy() end
             end
         end
     end
@@ -115,9 +124,6 @@ local function backupAnim(animObj, key)
     end
 end
 
--- ========================================================
--- APPLY ADIDAS ANIMATIONS
--- ========================================================
 local function applyAdidasAnimations()
     local char = player.Character
     if not char or not char.Parent then return false end
@@ -168,9 +174,6 @@ local function applyAdidasAnimations()
     return true
 end
 
--- ========================================================
--- REMOVE ADIDAS
--- ========================================================
 local function removeAdidasAnimations()
     local char = player.Character
     if not char or not char.Parent then return end
@@ -210,15 +213,146 @@ local function removeAdidasAnimations()
     AuraState.animEnabled = false
 end
 
--- ========================================================
--- TOGGLE FUNCTION
--- ========================================================
 local function toggleAnim()
     if isAnimOn then
         removeAdidasAnimations()
     else
         applyAdidasAnimations()
     end
+end
+
+-- ========================================================
+-- OVERHEAD TAG CREATION (Universal for Any Player)
+-- ========================================================
+local function createOverheadTagForPlayer(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return end
+    local head = targetPlayer.Character:FindFirstChild("Head")
+    if not head then return end
+
+    -- Clean old tag if present
+    local existingTag = head:FindFirstChild("OverheadTag")
+    if existingTag then existingTag:Destroy() end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "OverheadTag"
+    billboard.Size = UDim2.new(0, 140, 0, 36)
+    billboard.StudsOffset = Vector3.new(0, 2.9, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = math.huge
+    billboard.Parent = head
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.4
+    frame.BorderSizePixel = 0
+    frame.Parent = billboard
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(200, 0, 0)
+    stroke.Thickness = 1.8
+    stroke.Parent = frame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = frame
+
+    local tagLogoImage = Instance.new("ImageLabel")
+    tagLogoImage.Size = UDim2.new(0, 24, 0, 24)
+    tagLogoImage.Position = UDim2.new(0.02, 0, 0.5, -12)
+    tagLogoImage.BackgroundTransparency = 1
+    tagLogoImage.Image = CUSTOM_LOGO_ID
+    tagLogoImage.Parent = frame
+
+    local divider = Instance.new("Frame")
+    divider.Size = UDim2.new(0, 1.5, 0.7, 0)
+    divider.Position = UDim2.new(0.22, 0, 0.15, 0)
+    divider.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    divider.BorderSizePixel = 0
+    divider.Parent = frame
+
+    local overheadAuraLabel = Instance.new("TextLabel")
+    overheadAuraLabel.Size = UDim2.new(0.76, 0, 0.54, 0)
+    overheadAuraLabel.Position = UDim2.new(0.24, 0, 0.02, 0)
+    overheadAuraLabel.BackgroundTransparency = 1
+    overheadAuraLabel.Text = "Eɴᴅʟᴇss Aᴜʀᴀ: Usᴇʀ"
+    overheadAuraLabel.TextColor3 = Color3.fromRGB(200, 0, 0)
+    overheadAuraLabel.TextScaled = true
+    overheadAuraLabel.Font = Enum.Font.GothamBold
+    overheadAuraLabel.TextXAlignment = Enum.TextXAlignment.Left
+    overheadAuraLabel.Parent = frame
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0.76, 0, 0.38, 0)
+    nameLabel.Position = UDim2.new(0.24, 0, 0.57, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "@" .. targetPlayer.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = frame
+
+    local renderConn
+    local rotAngle = 0
+    renderConn = RunService.RenderStepped:Connect(function(dt)
+        if not isScriptAlive or not targetPlayer.Character or not head or not head.Parent then 
+            renderConn:Disconnect() 
+            return 
+        end
+        rotAngle = (rotAngle + (90 * dt)) % 360
+        if tagLogoImage and tagLogoImage.Parent then tagLogoImage.Rotation = rotAngle end
+        billboard.Enabled = AuraState.tagsEnabled
+    end)
+end
+
+-- ========================================================
+-- CHAT SIGNATURE LISTENER (Detect Other Script Users)
+-- ========================================================
+local function sendChatMessage(message)
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if targetChannel then targetChannel:SendAsync(message) end
+    else
+        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+        if sayMsgReq then sayMsgReq:FireServer(message, "All") end
+    end
+end
+
+-- Process chat messages from other players
+local function handleIncomingMessage(msgText, senderUserId)
+    if not isScriptAlive or not msgText then return end
+    
+    -- Check if message matches the script loaded signature
+    if string.find(msgText, "EGO EMPIRE KA PAPA ENDLESS-AURA", 1, true) then
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            if targetPlayer.UserId == senderUserId and targetPlayer ~= player then
+                DetectedScriptUsers[targetPlayer.UserId] = true
+                createOverheadTagForPlayer(targetPlayer)
+            end
+        end
+    end
+end
+
+-- Listen via TextChatService (Modern Roblox Chat)
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    TextChatService.OnIncomingMessage = function(message)
+        if message and message.TextSource then
+            handleIncomingMessage(message.Text, message.TextSource.UserId)
+        end
+    end
+else
+    -- Listen via Legacy Chat System
+    for _, p in ipairs(Players:GetPlayers()) do
+        p.Chatted:Connect(function(msg)
+            handleIncomingMessage(msg, p.UserId)
+        end)
+    end
+    Players.PlayerAdded:Connect(function(p)
+        p.Chatted:Connect(function(msg)
+            handleIncomingMessage(msg, p.UserId)
+        end)
+    end)
 end
 
 -- ========================================================
@@ -381,11 +515,24 @@ tagsLabel.MouseButton1Click:Connect(function()
     tagsLabel.Text = AuraState.tagsEnabled and "Tᴀɢs Øɴ" or "Tᴀɢs Øғғ"
     tagsDot.BackgroundColor3 = AuraState.tagsEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
     
+    -- Toggle for self
     local char = player.Character
     local head = char and char:FindFirstChild("Head")
     if head then
         local tag = head:FindFirstChild("OverheadTag")
         if tag then tag.Enabled = AuraState.tagsEnabled end
+    end
+    
+    -- Toggle for detected players
+    for userId, _ in pairs(DetectedScriptUsers) do
+        local p = Players:GetPlayerByUserId(userId)
+        if p and p.Character then
+            local h = p.Character:FindFirstChild("Head")
+            if h then
+                local tag = h:FindFirstChild("OverheadTag")
+                if tag then tag.Enabled = AuraState.tagsEnabled end
+            end
+        end
     end
 end)
 
@@ -428,12 +575,8 @@ animLabel.MouseButton1Click:Connect(function()
     AuraState.animEnabled = isAnimOn
 end)
 
--- ========================================================
--- SPAM TOGGLE (FORCE OFF by default)
--- ========================================================
+-- Spam Toggle (OFF by default)
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
-
--- FORCE SET spamLabel and spamDot to OFF state
 spamLabel.Text = "Sᴘᴀᴍ Øғғ"
 spamDot.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 AuraState.spamEnabled = false
@@ -446,26 +589,22 @@ spamLabel.MouseButton1Click:Connect(function()
     spamDot.BackgroundColor3 = AuraState.spamEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
 end)
 
--- ========================================================
--- SPAM ENGINE (OFF by default)
--- ========================================================
+-- Spam Engine
 local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
-
-local function sendChatMessage(message)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-        if targetChannel then targetChannel:SendAsync(message) end
-    else
-        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-        if sayMsgReq then sayMsgReq:FireServer(message, "All") end
-    end
-end
 
 task.spawn(function()
     while isScriptAlive do
         if AuraState.spamEnabled then pcall(sendChatMessage, spamText) end
         task.wait(2.6)
     end
+end)
+
+-- ==========================================================
+-- SCRIPT INITIAL LOAD BROADCAST (Send Signature on Execution)
+-- ==========================================================
+task.spawn(function()
+    task.wait(1)
+    pcall(sendChatMessage, SCRIPT_SIGNATURE)
 end)
 
 -- ========================================================
@@ -515,7 +654,7 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- CHARACTER SETUP (AURA)
+-- LOCAL CHARACTER SETUP (AURA & LOCAL TAG)
 -- ========================================================
 local function setup(character)
     if not isScriptAlive or not character or not character.Parent then return end
@@ -526,87 +665,10 @@ local function setup(character)
     
     if not head or not humanoid or not hrp then return end
 
-    -- Clean up
-    for _, child in ipairs(head:GetChildren()) do
-        if child.Name == "EACircle" or child.Name == "OverheadTag" then
-            child:Destroy()
-        end
-    end
+    -- Setup Overhead Tag for Local Player
+    createOverheadTagForPlayer(player)
 
-    -- ===== OVERHEAD TAG =====
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "OverheadTag"
-    billboard.Size = UDim2.new(0, 140, 0, 36)
-    billboard.StudsOffset = Vector3.new(0, 2.9, 0)
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = math.huge
-    billboard.Parent = head
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel = 0
-    frame.Parent = billboard
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(200, 0, 0)
-    stroke.Thickness = 1.8
-    stroke.Parent = frame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = frame
-
-    local tagLogoImage = Instance.new("ImageLabel")
-    tagLogoImage.Size = UDim2.new(0, 24, 0, 24)
-    tagLogoImage.Position = UDim2.new(0.02, 0, 0.5, -12)
-    tagLogoImage.BackgroundTransparency = 1
-    tagLogoImage.Image = CUSTOM_LOGO_ID
-    tagLogoImage.Parent = frame
-
-    local divider = Instance.new("Frame")
-    divider.Size = UDim2.new(0, 1.5, 0.7, 0)
-    divider.Position = UDim2.new(0.22, 0, 0.15, 0)
-    divider.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-    divider.BorderSizePixel = 0
-    divider.Parent = frame
-
-    local overheadAuraLabel = Instance.new("TextLabel")
-    overheadAuraLabel.Size = UDim2.new(0.76, 0, 0.54, 0)
-    overheadAuraLabel.Position = UDim2.new(0.24, 0, 0.02, 0)
-    overheadAuraLabel.BackgroundTransparency = 1
-    overheadAuraLabel.Text = "Eɴᴅʟᴇss Aᴜʀᴀ: Usᴇʀ"
-    overheadAuraLabel.TextColor3 = Color3.fromRGB(200, 0, 0)
-    overheadAuraLabel.TextScaled = true
-    overheadAuraLabel.Font = Enum.Font.GothamBold
-    overheadAuraLabel.TextXAlignment = Enum.TextXAlignment.Left
-    overheadAuraLabel.Parent = frame
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(0.76, 0, 0.38, 0)
-    nameLabel.Position = UDim2.new(0.24, 0, 0.57, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = "@" .. player.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.Gotham
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Parent = frame
-
-    local renderConn
-    local rotAngle = 0
-    renderConn = RunService.RenderStepped:Connect(function(dt)
-        if not isScriptAlive or not character or not character.Parent or not head or not head.Parent then 
-            renderConn:Disconnect() 
-            return 
-        end
-        rotAngle = (rotAngle + (90 * dt)) % 360
-        if tagLogoImage and tagLogoImage.Parent then tagLogoImage.Rotation = rotAngle end
-        billboard.Enabled = AuraState.tagsEnabled
-    end)
-
-    -- ===== AURA =====
+    -- ===== AURA EFFECT =====
     local function createThunder(parent, offsetY, rate, speed, size)
         if not isScriptAlive or not parent or not parent.Parent then return end
         local att = Instance.new("Attachment")
@@ -740,7 +802,7 @@ local function setup(character)
 end
 
 -- ========================================================
--- WATCHDOG
+-- WATCHDOG & RESPAWN RE-APPLY FOR OTHER USERS
 -- ========================================================
 local function attachCharacterTracks(character)
     if not isScriptAlive or not character then return end
@@ -756,6 +818,18 @@ task.spawn(function()
                 task.spawn(attachCharacterTracks, currentCharacter)
             end
         end
+        
+        -- Re-apply tags to detected players if they respawned
+        for userId, _ in pairs(DetectedScriptUsers) do
+            local p = Players:GetPlayerByUserId(userId)
+            if p and p.Character then
+                local h = p.Character:FindFirstChild("Head")
+                if h and not h:FindFirstChild("OverheadTag") then
+                    createOverheadTagForPlayer(p)
+                end
+            end
+        end
+        
         task.wait(1.5)
     end
 end)
@@ -775,11 +849,9 @@ task.spawn(function()
     if char and char.Parent then
         local success = applyAdidasAnimations()
         if success then
-            print("✅ Adidas Animations Applied!")
             animLabel.Text = "Aɴɪᴍ Øɴ"
             animDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
         else
-            print("❌ Failed to apply animations, retrying...")
             task.wait(2)
             if player.Character then
                 applyAdidasAnimations()
@@ -795,9 +867,7 @@ player.CharacterAdded:Connect(function(char)
     defaultAnims = {}
     
     task.wait(1.5)
-    if isAnimOn then
-        applyAdidasAnimations()
-    elseif AuraState.animEnabled then
+    if isAnimOn or AuraState.animEnabled then
         applyAdidasAnimations()
     end
 end)
