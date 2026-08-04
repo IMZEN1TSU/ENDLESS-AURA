@@ -1,4 +1,4 @@
--- LocalScript (EA HUD TAGS with Cross-Player Detection)
+-- LocalScript (EA HUD TAGS with Hidden Object Signal System)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -6,8 +6,6 @@ local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
-local TextChatService = game:GetService("TextChatService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 -- PlayerGui Safety
@@ -16,8 +14,8 @@ local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildO
 -- Logo Asset
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
 
--- Signature Trigger Message
-local SCRIPT_SIGNATURE = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢 Loaded..."
+-- Unique Invisible Handshake Key (Hidden Object Name)
+local SECRET_TAG_KEY = "EA_Tag_Registered"
 
 -- Table to store detected script users
 local DetectedScriptUsers = {}
@@ -74,6 +72,8 @@ _G.AuraKillSwitch = function()
                 end
             end
         end
+        local tagKey = char:FindFirstChild(SECRET_TAG_KEY)
+        if tagKey then tagKey:Destroy() end
     end
 
     if AuraState.emitters then
@@ -86,7 +86,6 @@ _G.AuraKillSwitch = function()
         playerGui:FindFirstChild("AuraHUD"):Destroy()
     end
 
-    -- Clean overhead tags from all players on KillSwitch
     for _, p in ipairs(Players:GetPlayers()) do
         if p.Character then
             local h = p.Character:FindFirstChild("Head")
@@ -222,14 +221,13 @@ local function toggleAnim()
 end
 
 -- ========================================================
--- OVERHEAD TAG CREATION (Universal for Any Player)
+-- OVERHEAD TAG CREATION
 -- ========================================================
 local function createOverheadTagForPlayer(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return end
     local head = targetPlayer.Character:FindFirstChild("Head")
     if not head then return end
 
-    -- Clean old tag if present
     local existingTag = head:FindFirstChild("OverheadTag")
     if existingTag then existingTag:Destroy() end
 
@@ -307,53 +305,36 @@ local function createOverheadTagForPlayer(targetPlayer)
 end
 
 -- ========================================================
--- CHAT SIGNATURE LISTENER (Detect Other Script Users)
+-- SILENT HANDSHAKE & CHARACTER DETECTION ENGINE
 -- ========================================================
-local function sendChatMessage(message)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-        if targetChannel then targetChannel:SendAsync(message) end
-    else
-        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-        if sayMsgReq then sayMsgReq:FireServer(message, "All") end
+local function registerSelfHandshake(char)
+    if not char then return end
+    if not char:FindFirstChild(SECRET_TAG_KEY) then
+        local keyVal = Instance.new("StringValue")
+        keyVal.Name = SECRET_TAG_KEY
+        keyVal.Value = player.Name
+        keyVal.Parent = char
     end
 end
 
--- Process chat messages from other players
-local function handleIncomingMessage(msgText, senderUserId)
-    if not isScriptAlive or not msgText then return end
-    
-    -- Check if message matches the script loaded signature
-    if string.find(msgText, "EGO EMPIRE KA PAPA ENDLESS-AURA", 1, true) then
-        for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            if targetPlayer.UserId == senderUserId and targetPlayer ~= player then
-                DetectedScriptUsers[targetPlayer.UserId] = true
-                createOverheadTagForPlayer(targetPlayer)
+-- Background Scanner Loop (Detects script users instantly)
+task.spawn(function()
+    while isScriptAlive do
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character then
+                local otherChar = otherPlayer.Character
+                if otherChar:FindFirstChild(SECRET_TAG_KEY) then
+                    DetectedScriptUsers[otherPlayer.UserId] = true
+                    local head = otherChar:FindFirstChild("Head")
+                    if head and not head:FindFirstChild("OverheadTag") then
+                        createOverheadTagForPlayer(otherPlayer)
+                    end
+                end
             end
         end
+        task.wait(1)
     end
-end
-
--- Listen via TextChatService (Modern Roblox Chat)
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    TextChatService.OnIncomingMessage = function(message)
-        if message and message.TextSource then
-            handleIncomingMessage(message.Text, message.TextSource.UserId)
-        end
-    end
-else
-    -- Listen via Legacy Chat System
-    for _, p in ipairs(Players:GetPlayers()) do
-        p.Chatted:Connect(function(msg)
-            handleIncomingMessage(msg, p.UserId)
-        end)
-    end
-    Players.PlayerAdded:Connect(function(p)
-        p.Chatted:Connect(function(msg)
-            handleIncomingMessage(msg, p.UserId)
-        end)
-    end)
-end
+end)
 
 -- ========================================================
 -- HUD CREATION
@@ -506,7 +487,7 @@ end
 -- HUD TOGGLES
 -- ========================================================
 
--- Tags Toggle (ON)
+-- Tags Toggle
 local _, tagsLabel, tagsDot = createBox("TagsToggle", "Tᴀɢs Øɴ", true, true)
 tagsLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -515,7 +496,6 @@ tagsLabel.MouseButton1Click:Connect(function()
     tagsLabel.Text = AuraState.tagsEnabled and "Tᴀɢs Øɴ" or "Tᴀɢs Øғғ"
     tagsDot.BackgroundColor3 = AuraState.tagsEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
     
-    -- Toggle for self
     local char = player.Character
     local head = char and char:FindFirstChild("Head")
     if head then
@@ -523,7 +503,6 @@ tagsLabel.MouseButton1Click:Connect(function()
         if tag then tag.Enabled = AuraState.tagsEnabled end
     end
     
-    -- Toggle for detected players
     for userId, _ in pairs(DetectedScriptUsers) do
         local p = Players:GetPlayerByUserId(userId)
         if p and p.Character then
@@ -536,7 +515,7 @@ tagsLabel.MouseButton1Click:Connect(function()
     end
 end)
 
--- Aura Toggle (ON)
+-- Aura Toggle
 local _, auraLabel, auraDot = createBox("AuraToggle", "Aᴜʀᴀ Øɴ", true, true)
 auraLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -561,21 +540,18 @@ local _, pingLabel = createBox("Ping", "Pɪɴɢ: --ᴍs", false, false)
 -- Time
 local _, timeLabel = createBox("Time", "--:--", false, false)
 
--- Anim Toggle (ON)
+-- Anim Toggle
 local _, animLabel, animDot = createBox("AnimToggle", "Aɴɪᴍ Øɴ", true, true)
-
 animLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
     playCustomSound(107406973902030)
-    
     toggleAnim()
-    
     animLabel.Text = isAnimOn and "Aɴɪᴍ Øɴ" or "Aɴɪᴍ Øғғ"
     animDot.BackgroundColor3 = isAnimOn and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
     AuraState.animEnabled = isAnimOn
 end)
 
--- Spam Toggle (OFF by default)
+-- Spam Toggle
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
 spamLabel.Text = "Sᴘᴀᴍ Øғғ"
 spamDot.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
@@ -589,22 +565,23 @@ spamLabel.MouseButton1Click:Connect(function()
     spamDot.BackgroundColor3 = AuraState.spamEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
 end)
 
--- Spam Engine
+-- Spam Loop
 local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
-
 task.spawn(function()
     while isScriptAlive do
-        if AuraState.spamEnabled then pcall(sendChatMessage, spamText) end
+        if AuraState.spamEnabled then
+            pcall(function()
+                local TextChatService = game:GetService("TextChatService")
+                if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                    local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+                    if channel then channel:SendAsync(spamText) end
+                else
+                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(spamText, "All")
+                end
+            end)
+        end
         task.wait(2.6)
     end
-end)
-
--- ==========================================================
--- SCRIPT INITIAL LOAD BROADCAST (Send Signature on Execution)
--- ==========================================================
-task.spawn(function()
-    task.wait(1)
-    pcall(sendChatMessage, SCRIPT_SIGNATURE)
 end)
 
 -- ========================================================
@@ -665,10 +642,11 @@ local function setup(character)
     
     if not head or not humanoid or not hrp then return end
 
-    -- Setup Overhead Tag for Local Player
+    -- Inject Secret Key & Create Local Tag
+    registerSelfHandshake(character)
     createOverheadTagForPlayer(player)
 
-    -- ===== AURA EFFECT =====
+    -- AURA EFFECT
     local function createThunder(parent, offsetY, rate, speed, size)
         if not isScriptAlive or not parent or not parent.Parent then return end
         local att = Instance.new("Attachment")
@@ -802,7 +780,7 @@ local function setup(character)
 end
 
 -- ========================================================
--- WATCHDOG & RESPAWN RE-APPLY FOR OTHER USERS
+-- WATCHDOG & RESPAWN RE-APPLY
 -- ========================================================
 local function attachCharacterTracks(character)
     if not isScriptAlive or not character then return end
@@ -818,18 +796,6 @@ task.spawn(function()
                 task.spawn(attachCharacterTracks, currentCharacter)
             end
         end
-        
-        -- Re-apply tags to detected players if they respawned
-        for userId, _ in pairs(DetectedScriptUsers) do
-            local p = Players:GetPlayerByUserId(userId)
-            if p and p.Character then
-                local h = p.Character:FindFirstChild("Head")
-                if h and not h:FindFirstChild("OverheadTag") then
-                    createOverheadTagForPlayer(p)
-                end
-            end
-        end
-        
         task.wait(1.5)
     end
 end)
@@ -840,11 +806,10 @@ player.CharacterAdded:Connect(function(char)
 end)
 
 -- ========================================================
--- AUTO START - APPLY ADIDAS ANIMATIONS
+-- AUTO START ANIMATIONS
 -- ========================================================
 task.spawn(function()
     wait(1.5)
-    
     local char = player.Character
     if char and char.Parent then
         local success = applyAdidasAnimations()
@@ -853,21 +818,13 @@ task.spawn(function()
             animDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
         else
             task.wait(2)
-            if player.Character then
-                applyAdidasAnimations()
-            end
+            if player.Character then applyAdidasAnimations() end
         end
     end
 end)
 
--- ========================================================
--- RESPAWN HANDLER
--- ========================================================
 player.CharacterAdded:Connect(function(char)
     defaultAnims = {}
-    
     task.wait(1.5)
-    if isAnimOn or AuraState.animEnabled then
-        applyAdidasAnimations()
-    end
+    if isAnimOn or AuraState.animEnabled then applyAdidasAnimations() end
 end)
