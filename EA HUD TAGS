@@ -1,4 +1,4 @@
--- LocalScript (EA HUD TAGS with Bi-Directional Auto-Handshake)
+-- LocalScript (EA HUD TAGS - Realtime Animation Detection System)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -6,27 +6,14 @@ local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
-local TextChatService = game:GetService("TextChatService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- PlayerGui Safety
 local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildOfClass("PlayerGui")
 
--- Logo Asset
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
 
--- Signature Trigger Message
-local SCRIPT_SIGNATURE = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢 Loaded..."
-
--- Table to store detected script users
-local DetectedScriptUsers = {}
-
--- Anti-Spam lock for auto-response handshake
-local lastHandshakeResponse = 0
-
 -- ========================================================
--- ADIDAS ANIMATION PACK
+-- ADIDAS ANIMATION PACK (DETECTION KEYS)
 -- ========================================================
 local ADIDAS_PACK = {
     WalkAnim   = 89374309350091,
@@ -43,6 +30,12 @@ local ADIDAS_PACK = {
 local isAnimOn = false
 local defaultAnims = {}
 
+-- Store Animation IDs in a lookup table for fast checking
+local ADIDAS_IDS_LOOKUP = {}
+for _, id in pairs(ADIDAS_PACK) do
+    ADIDAS_IDS_LOOKUP[tostring(id)] = true
+end
+
 -- ========================================================
 -- ANTI-OVERLAP & KILLSWITCH
 -- ========================================================
@@ -56,8 +49,7 @@ _G.AuraState = {
     animEnabled = true,   
     spamEnabled = false,
     hudVisible = true,
-    emitters = {},
-    currentTrack = nil
+    emitters = {}
 }
 local AuraState = _G.AuraState
 
@@ -101,7 +93,7 @@ _G.AuraKillSwitch = function()
 end
 
 -- ========================================================
--- ANIMATION FUNCTIONS
+-- ANIMATION APPLY / REMOVE (LOCAL PLAYER)
 -- ========================================================
 local function waitForAnimate(char)
     for _ = 1, 40 do
@@ -224,15 +216,14 @@ local function toggleAnim()
 end
 
 -- ========================================================
--- OVERHEAD TAG CREATION
+-- OVERHEAD TAG CREATION & DESTRUCTION
 -- ========================================================
 local function createOverheadTagForPlayer(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return end
     local head = targetPlayer.Character:FindFirstChild("Head")
     if not head then return end
 
-    local existingTag = head:FindFirstChild("OverheadTag")
-    if existingTag then existingTag:Destroy() end
+    if head:FindFirstChild("OverheadTag") then return end
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "OverheadTag"
@@ -307,71 +298,75 @@ local function createOverheadTagForPlayer(targetPlayer)
     end)
 end
 
--- ========================================================
--- CHAT SIGNATURE LISTENER & HANDSHAKE PROTOCOL
--- ========================================================
-local function sendChatMessage(message)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-        if targetChannel then targetChannel:SendAsync(message) end
-    else
-        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-        if sayMsgReq then sayMsgReq:FireServer(message, "All") end
+local function removeOverheadTagForPlayer(targetPlayer)
+    if targetPlayer and targetPlayer.Character then
+        local head = targetPlayer.Character:FindFirstChild("Head")
+        if head then
+            local tag = head:FindFirstChild("OverheadTag")
+            if tag then tag:Destroy() end
+        end
     end
 end
 
-local function handleIncomingMessage(msgText, senderUserId)
-    if not isScriptAlive or not msgText then return end
+-- ========================================================
+-- REALTIME ANIMATION TRACK SCANNER ENGINE
+-- ========================================================
+local function checkPlayerForAdidasPack(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return false end
+    local char = targetPlayer.Character
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
     
-    if string.find(msgText, "EGO EMPIRE KA PAPA ENDLESS-AURA", 1, true) then
-        -- Ignore our own chat messages
-        if senderUserId == player.UserId then return end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then return false end
 
-        for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            if targetPlayer.UserId == senderUserId then
-                -- Register user & Add overhead tag
-                if not DetectedScriptUsers[targetPlayer.UserId] then
-                    DetectedScriptUsers[targetPlayer.UserId] = true
-                    createOverheadTagForPlayer(targetPlayer)
+    -- Check active playing tracks
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        if track.Animation then
+            local animIdStr = track.Animation.AnimationId:match("%d+")
+            if animIdStr and ADIDAS_IDS_LOOKUP[animIdStr] then
+                return true
+            end
+        end
+    end
 
-                    -- Auto-respond to acknowledge newly joined script user (Cooldown: 3s)
-                    if tick() - lastHandshakeResponse > 3 then
-                        lastHandshakeResponse = tick()
-                        task.delay(1, function()
-                            pcall(sendChatMessage, SCRIPT_SIGNATURE)
-                        end)
-                    end
-                else
-                    createOverheadTagForPlayer(targetPlayer)
+    -- Check character animate folder
+    local animate = char:FindFirstChild("Animate")
+    if animate then
+        for _, item in ipairs(animate:GetDescendants()) do
+            if item:IsA("Animation") then
+                local animIdStr = item.AnimationId:match("%d+")
+                if animIdStr and ADIDAS_IDS_LOOKUP[animIdStr] then
+                    return true
                 end
             end
         end
     end
+
+    return false
 end
 
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    TextChatService.OnIncomingMessage = function(message)
-        if message and message.TextSource then
-            handleIncomingMessage(message.Text, message.TextSource.UserId)
-        end
-    end
-else
-    for _, p in ipairs(Players:GetPlayers()) do
-        p.Chatted:Connect(function(msg) handleIncomingMessage(msg, p.UserId) end)
-    end
-    Players.PlayerAdded:Connect(function(p)
-        p.Chatted:Connect(function(msg) handleIncomingMessage(msg, p.UserId) end)
-    end)
-end
-
--- Broadcast Signature on Execution (Pings all active users)
+-- Scanner loop (Continuously checks all players in server)
 task.spawn(function()
-    task.wait(1.2)
-    pcall(sendChatMessage, SCRIPT_SIGNATURE)
+    while isScriptAlive do
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer.Character then
+                local isUsingAdidas = checkPlayerForAdidasPack(otherPlayer)
+                if isUsingAdidas then
+                    createOverheadTagForPlayer(otherPlayer)
+                else
+                    if otherPlayer ~= player then
+                        removeOverheadTagForPlayer(otherPlayer)
+                    end
+                end
+            end
+        end
+        task.wait(1.2)
+    end
 end)
 
 -- ========================================================
--- HUD CREATION
+-- HUD CREATION & INTERFACE
 -- ========================================================
 if playerGui and playerGui:FindFirstChild("AuraHUD") then
     playerGui:FindFirstChild("AuraHUD"):Destroy()
@@ -530,16 +525,8 @@ tagsLabel.MouseButton1Click:Connect(function()
     tagsLabel.Text = AuraState.tagsEnabled and "Tᴀɢs Øɴ" or "Tᴀɢs Øғғ"
     tagsDot.BackgroundColor3 = AuraState.tagsEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
     
-    local char = player.Character
-    local head = char and char:FindFirstChild("Head")
-    if head then
-        local tag = head:FindFirstChild("OverheadTag")
-        if tag then tag.Enabled = AuraState.tagsEnabled end
-    end
-    
-    for userId, _ in pairs(DetectedScriptUsers) do
-        local p = Players:GetPlayerByUserId(userId)
-        if p and p.Character then
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then
             local h = p.Character:FindFirstChild("Head")
             if h then
                 local tag = h:FindFirstChild("OverheadTag")
@@ -603,7 +590,17 @@ end)
 local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
 task.spawn(function()
     while isScriptAlive do
-        if AuraState.spamEnabled then pcall(sendChatMessage, spamText) end
+        if AuraState.spamEnabled then
+            pcall(function()
+                local TextChatService = game:GetService("TextChatService")
+                if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                    local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+                    if channel then channel:SendAsync(spamText) end
+                else
+                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(spamText, "All")
+                end
+            end)
+        end
         task.wait(2.6)
     end
 end)
@@ -655,7 +652,7 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- LOCAL CHARACTER SETUP (AURA & LOCAL TAG)
+-- LOCAL CHARACTER SETUP (AURA)
 -- ========================================================
 local function setup(character)
     if not isScriptAlive or not character or not character.Parent then return end
@@ -666,9 +663,6 @@ local function setup(character)
     
     if not head or not humanoid or not hrp then return end
 
-    createOverheadTagForPlayer(player)
-
-    -- AURA EFFECT
     local function createThunder(parent, offsetY, rate, speed, size)
         if not isScriptAlive or not parent or not parent.Parent then return end
         local att = Instance.new("Attachment")
@@ -809,37 +803,13 @@ local function attachCharacterTracks(character)
     task.spawn(setup, character)
 end
 
-task.spawn(function()
-    while isScriptAlive do
-        local currentCharacter = player.Character
-        if currentCharacter and currentCharacter.Parent then
-            local head = currentCharacter:FindFirstChild("Head")
-            if head and not head:FindFirstChild("OverheadTag") then
-                task.spawn(attachCharacterTracks, currentCharacter)
-            end
-        end
-        
-        for userId, _ in pairs(DetectedScriptUsers) do
-            local p = Players:GetPlayerByUserId(userId)
-            if p and p.Character then
-                local h = p.Character:FindFirstChild("Head")
-                if h and not h:FindFirstChild("OverheadTag") then
-                    createOverheadTagForPlayer(p)
-                end
-            end
-        end
-        
-        task.wait(1.5)
-    end
-end)
-
 if player.Character then task.spawn(attachCharacterTracks, player.Character) end
 player.CharacterAdded:Connect(function(char)
     task.spawn(attachCharacterTracks, char)
 end)
 
 -- ========================================================
--- AUTO START ANIMATIONS
+-- AUTO START ANIMATIONS FOR LOCAL PLAYER
 -- ========================================================
 task.spawn(function()
     wait(1.5)
