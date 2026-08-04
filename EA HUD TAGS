@@ -1,4 +1,4 @@
--- LocalScript (Fully Fixed - Auto ON at Start)
+-- LocalScript (Spam Fixed - OFF by default)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -45,7 +45,7 @@ _G.AuraState = {
     tagsEnabled = true,   
     auraEnabled = true,   
     animEnabled = true,   
-    spamEnabled = false,
+    spamEnabled = false,  -- <-- SPAM OFF by default
     hudVisible = true,
     emitters = {},
     currentTrack = nil
@@ -116,7 +116,7 @@ local function backupAnim(animObj, key)
 end
 
 -- ========================================================
--- APPLY ADIDAS ANIMATIONS (FORCE APPLY)
+-- APPLY ADIDAS ANIMATIONS
 -- ========================================================
 local function applyAdidasAnimations()
     local char = player.Character
@@ -134,7 +134,6 @@ local function applyAdidasAnimations()
     local swimIdle = animate:FindFirstChild("swimidle") and animate.swimidle:FindFirstChildOfClass("Animation")
     local idleFolder = animate:FindFirstChild("idle")
 
-    -- Backup originals
     backupAnim(walkObj, "walk")
     backupAnim(runObj, "run")
     backupAnim(jumpObj, "jump")
@@ -143,7 +142,6 @@ local function applyAdidasAnimations()
     backupAnim(swimObj, "swim")
     backupAnim(swimIdle, "swimidle")
 
-    -- Apply Adidas
     setAnim(walkObj, ADIDAS_PACK.WalkAnim)
     setAnim(runObj, ADIDAS_PACK.RunAnim)
     setAnim(jumpObj, ADIDAS_PACK.JumpAnim)
@@ -161,7 +159,6 @@ local function applyAdidasAnimations()
         setAnim(a2, ADIDAS_PACK.Animation2)
     end
 
-    -- Refresh Animate
     animate.Disabled = true
     task.wait(0.05)
     animate.Disabled = false
@@ -172,7 +169,7 @@ local function applyAdidasAnimations()
 end
 
 -- ========================================================
--- REMOVE ADIDAS (Restore Default)
+-- REMOVE ADIDAS
 -- ========================================================
 local function removeAdidasAnimations()
     local char = player.Character
@@ -214,7 +211,7 @@ local function removeAdidasAnimations()
 end
 
 -- ========================================================
--- TOGGLE FUNCTION (For HUD Button)
+-- TOGGLE FUNCTION
 -- ========================================================
 local function toggleAnim()
     if isAnimOn then
@@ -372,7 +369,7 @@ local function createBox(name, text, withDot, interactive)
 end
 
 -- ========================================================
--- HUD TOGGLES (All ON by default)
+-- HUD TOGGLES
 -- ========================================================
 
 -- Tags Toggle (ON)
@@ -431,8 +428,16 @@ animLabel.MouseButton1Click:Connect(function()
     AuraState.animEnabled = isAnimOn
 end)
 
--- Spam Toggle (OFF)
+-- ========================================================
+-- SPAM TOGGLE (FORCE OFF by default)
+-- ========================================================
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
+
+-- FORCE SET spamLabel and spamDot to OFF state
+spamLabel.Text = "Sᴘᴀᴍ Øғғ"
+spamDot.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+AuraState.spamEnabled = false
+
 spamLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
     playCustomSound(107406973902030)
@@ -764,7 +769,6 @@ end)
 -- AUTO START - APPLY ADIDAS ANIMATIONS
 -- ========================================================
 task.spawn(function()
-    -- Wait for character and animate to load
     wait(1.5)
     
     local char = player.Character
@@ -772,12 +776,10 @@ task.spawn(function()
         local success = applyAdidasAnimations()
         if success then
             print("✅ Adidas Animations Applied!")
-            -- Update HUD
             animLabel.Text = "Aɴɪᴍ Øɴ"
             animDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
         else
             print("❌ Failed to apply animations, retrying...")
-            -- Retry after 2 seconds
             task.wait(2)
             if player.Character then
                 applyAdidasAnimations()
@@ -792,7 +794,6 @@ end)
 player.CharacterAdded:Connect(function(char)
     defaultAnims = {}
     
-    -- Re-apply animations on respawn
     task.wait(1.5)
     if isAnimOn then
         applyAdidasAnimations()
