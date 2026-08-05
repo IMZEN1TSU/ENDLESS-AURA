@@ -1,4 +1,4 @@
--- LocalScript (EA HUD TAGS - Smooth Custom Track Engine)
+-- LocalScript (Endless Aura HUD + Clean Anim Engine)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -9,11 +9,10 @@ local Debris = game:GetService("Debris")
 local player = Players.LocalPlayer
 
 local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildOfClass("PlayerGui")
-
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
 
 -- ========================================================
--- ADIDAS ANIMATION PACK
+-- ADIDAS ANIMATION PACK & TRACK DICTIONARY
 -- ========================================================
 local ADIDAS_PACK = {
     WalkAnim   = 89374309350091,
@@ -27,14 +26,13 @@ local ADIDAS_PACK = {
     ClimbAnim  = 82737482702137,
 }
 
-local activeTracks = {}
-local isAnimOn = false
-
--- Quick Lookup Table for Scanning Engine
-local ADIDAS_IDS_LOOKUP = {}
+local ADIDAS_LOOKUP = {}
 for _, id in pairs(ADIDAS_PACK) do
-    ADIDAS_IDS_LOOKUP[tostring(id)] = true
+    ADIDAS_LOOKUP[tostring(id)] = true
 end
+
+local isAnimOn = false
+local defaultAnims = {}
 
 -- ========================================================
 -- ANTI-OVERLAP & KILLSWITCH
@@ -57,14 +55,6 @@ local isScriptAlive = true
 _G.AuraKillSwitch = function()
     isScriptAlive = false
     
-    for _, track in pairs(activeTracks) do
-        if track then
-            track:Stop(0)
-            track:Destroy()
-        end
-    end
-    activeTracks = {}
-
     if AuraState.emitters then
         for _, emitter in ipairs(AuraState.emitters) do
             if emitter and emitter.Parent then emitter:Destroy() end
@@ -87,18 +77,15 @@ _G.AuraKillSwitch = function()
 end
 
 -- ========================================================
--- NO-GLITCH CUSTOM ANIMATION TRACK ENGINE
+-- FIXED ANIMATION APPLY SYSTEM (NO IDLE GLITCH)
 -- ========================================================
-local function stopCustomAnimations()
-    for key, track in pairs(activeTracks) do
-        if track then
-            track:Stop(0.15)
-            track:Destroy()
+local function stopAllPlayingTracks(humanoid)
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if animator then
+        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+            track:Stop(0.1)
         end
     end
-    activeTracks = {}
-    isAnimOn = false
-    AuraState.animEnabled = false
 end
 
 local function applyAdidasAnimations()
@@ -106,44 +93,79 @@ local function applyAdidasAnimations()
     if not char or not char.Parent then return false end
     
     local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return false end
-    
-    local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+    local animate = char:FindFirstChild("Animate")
+    if not humanoid or not animate then return false end
 
-    stopCustomAnimations()
+    -- Clear lingering animation glitches
+    stopAllPlayingTracks(humanoid)
 
-    -- Play smooth override track on top of idle
-    local animObj = Instance.new("Animation")
-    animObj.AnimationId = "rbxassetid://" .. tostring(ADIDAS_PACK.Animation1)
-    
-    local track = animator:LoadAnimation(animObj)
-    track.Priority = Enum.AnimationPriority.Action4
-    track.Looped = true
-    track:Play(0.2, 1, 1)
+    local runObj   = animate:FindFirstChild("run") and animate.run:FindFirstChildOfClass("Animation")
+    local walkObj  = animate:FindFirstChild("walk") and animate.walk:FindFirstChildOfClass("Animation")
+    local jumpObj  = animate:FindFirstChild("jump") and animate.jump:FindFirstChildOfClass("Animation")
+    local fallObj  = animate:FindFirstChild("fall") and animate.fall:FindFirstChildOfClass("Animation")
+    local climbObj = animate:FindFirstChild("climb") and animate.climb:FindFirstChildOfClass("Animation")
+    local swimObj  = animate:FindFirstChild("swim") and animate.swim:FindFirstChildOfClass("Animation")
+    local swimIdle = animate:FindFirstChild("swimidle") and animate.swimidle:FindFirstChildOfClass("Animation")
+    local idleFolder = animate:FindFirstChild("idle")
 
-    activeTracks["Idle"] = track
+    if walkObj then walkObj.AnimationId = "rbxassetid://" .. ADIDAS_PACK.WalkAnim end
+    if runObj then runObj.AnimationId = "rbxassetid://" .. ADIDAS_PACK.RunAnim end
+    if jumpObj then jumpObj.AnimationId = "rbxassetid://" .. ADIDAS_PACK.JumpAnim end
+    if fallObj then fallObj.AnimationId = "rbxassetid://" .. ADIDAS_PACK.FallAnim end
+    if climbObj then climbObj.AnimationId = "rbxassetid://" .. ADIDAS_PACK.ClimbAnim end
+    if swimObj then swimObj.AnimationId = "rbxassetid://" .. ADIDAS_PACK.Swim end
+    if swimIdle then swimIdle.AnimationId = "rbxassetid://" .. ADIDAS_PACK.SwimIdle end
+
+    if idleFolder then
+        local a1 = idleFolder:FindFirstChild("Animation1")
+        local a2 = idleFolder:FindFirstChild("Animation2")
+        if a1 then a1.AnimationId = "rbxassetid://" .. ADIDAS_PACK.Animation1 end
+        if a2 then a2.AnimationId = "rbxassetid://" .. ADIDAS_PACK.Animation2 end
+    end
+
+    -- Reload Animate script safely
+    animate.Disabled = true
+    task.wait(0.02)
+    animate.Disabled = false
+
     isAnimOn = true
     AuraState.animEnabled = true
     return true
 end
 
+local function removeAdidasAnimations()
+    local char = player.Character
+    if not char or not char.Parent then return end
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local animate = char:FindFirstChild("Animate")
+    if not humanoid or not animate then return end
+
+    stopAllPlayingTracks(humanoid)
+
+    animate.Disabled = true
+    task.wait(0.02)
+    animate.Disabled = false
+
+    isAnimOn = false
+    AuraState.animEnabled = false
+end
+
 local function toggleAnim()
     if isAnimOn then
-        stopCustomAnimations()
+        removeAdidasAnimations()
     else
         applyAdidasAnimations()
     end
 end
 
 -- ========================================================
--- OVERHEAD TAG CREATION & DESTRUCTION
+-- OVERHEAD TAG CREATION & CLEAN REMOVAL
 -- ========================================================
 local function createOverheadTagForPlayer(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return end
     local head = targetPlayer.Character:FindFirstChild("Head")
-    if not head then return end
-
-    if head:FindFirstChild("OverheadTag") then return end
+    if not head or head:FindFirstChild("OverheadTag") then return end
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "OverheadTag"
@@ -229,22 +251,37 @@ local function removeOverheadTagForPlayer(targetPlayer)
 end
 
 -- ========================================================
--- DIRECT ANIMATION SCANNER
+-- TARGET SCANNER LOGIC (ANIMATION DETECTION)
 -- ========================================================
-local function checkPlayerForAdidasPack(targetPlayer)
+local function isPlayerUsingAdidas(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return false end
     local char = targetPlayer.Character
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return false end
-    
-    local animator = humanoid:FindFirstChildOfClass("Animator")
-    if not animator then return false end
 
-    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-        if track.Animation then
-            local animIdStr = track.Animation.AnimationId:match("%d+")
-            if animIdStr and ADIDAS_IDS_LOOKUP[animIdStr] then
-                return true
+    -- 1. Check direct Animate instance IDs
+    local animate = char:FindFirstChild("Animate")
+    if animate then
+        for _, obj in ipairs(animate:GetDescendants()) do
+            if obj:IsA("Animation") and obj.AnimationId ~= "" then
+                local rawId = obj.AnimationId:match("%d+")
+                if rawId and ADIDAS_LOOKUP[rawId] then
+                    return true
+                end
+            end
+        end
+    end
+
+    -- 2. Check active playing tracks on Animator
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                if track.Animation then
+                    local rawId = track.Animation.AnimationId:match("%d+")
+                    if rawId and ADIDAS_LOOKUP[rawId] then
+                        return true
+                    end
+                end
             end
         end
     end
@@ -252,13 +289,12 @@ local function checkPlayerForAdidasPack(targetPlayer)
     return false
 end
 
--- Scanner loop
+-- Loop to continuously scan server players
 task.spawn(function()
     while isScriptAlive do
         for _, otherPlayer in ipairs(Players:GetPlayers()) do
             if otherPlayer.Character then
-                local isUsingAdidas = checkPlayerForAdidasPack(otherPlayer)
-                if isUsingAdidas then
+                if isPlayerUsingAdidas(otherPlayer) then
                     createOverheadTagForPlayer(otherPlayer)
                 else
                     if otherPlayer ~= player then
@@ -272,7 +308,7 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- HUD CREATION & INTERFACE
+-- HUD INTERFACE
 -- ========================================================
 if playerGui and playerGui:FindFirstChild("AuraHUD") then
     playerGui:FindFirstChild("AuraHUD"):Destroy()
@@ -418,11 +454,7 @@ local function createBox(name, text, withDot, interactive)
     return box, label, dot
 end
 
--- ========================================================
 -- HUD TOGGLES
--- ========================================================
-
--- Tags Toggle
 local _, tagsLabel, tagsDot = createBox("TagsToggle", "Tᴀɢs Øɴ", true, true)
 tagsLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -442,7 +474,6 @@ tagsLabel.MouseButton1Click:Connect(function()
     end
 end)
 
--- Aura Toggle
 local _, auraLabel, auraDot = createBox("AuraToggle", "Aᴜʀᴀ Øɴ", true, true)
 auraLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -458,16 +489,10 @@ auraLabel.MouseButton1Click:Connect(function()
     end
 end)
 
--- FPS
 local _, fpsLabel = createBox("FPS", "Fᴘs: --", false, false)
-
--- Ping
 local _, pingLabel = createBox("Ping", "Pɪɴɢ: --ᴍs", false, false)
-
--- Time
 local _, timeLabel = createBox("Time", "--:--", false, false)
 
--- Anim Toggle
 local _, animLabel, animDot = createBox("AnimToggle", "Aɴɪᴍ Øɴ", true, true)
 animLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -475,9 +500,9 @@ animLabel.MouseButton1Click:Connect(function()
     toggleAnim()
     animLabel.Text = isAnimOn and "Aɴɪᴍ Øɴ" or "Aɴɪᴍ Øғғ"
     animDot.BackgroundColor3 = isAnimOn and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
+    AuraState.animEnabled = isAnimOn
 end)
 
--- Spam Toggle
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
 spamLabel.Text = "Sᴘᴀᴍ Øғғ"
 spamDot.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
@@ -510,9 +535,7 @@ task.spawn(function()
     end
 end)
 
--- ========================================================
--- HUD LOGO TWEEN
--- ========================================================
+-- LOGO ANIMATION TWEEN
 local isTweeningHUD = false
 local currentRotation = 0
 
@@ -533,9 +556,7 @@ logoToggleBtn.MouseButton1Click:Connect(function()
     slideTween.Completed:Connect(function() isTweeningHUD = false end)
 end)
 
--- ========================================================
--- STATS UPDATES
--- ========================================================
+-- STATS MONITOR
 RunService.Heartbeat:Connect(function(dt)
     if not isScriptAlive then return end
     if dt > 0 then fpsLabel.Text = "Fᴘs: " .. math.floor(1 / dt) end
@@ -557,7 +578,7 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- LOCAL CHARACTER SETUP (AURA)
+-- AURA EFFECTS ON CHARACTER
 -- ========================================================
 local function setup(character)
     if not isScriptAlive or not character or not character.Parent then return end
@@ -667,68 +688,27 @@ local function setup(character)
         end
     end
     createThunder(hrp, 0, 70, 5, 1.4)
-
-    local groundAtt = Instance.new("Attachment")
-    groundAtt.Name = "AuraAttachment"
-    groundAtt.Position = Vector3.new(0, -3, 0)
-    groundAtt.Parent = hrp
-
-    local groundThunder = Instance.new("ParticleEmitter")
-    groundThunder.Parent = groundAtt
-    groundThunder.Texture = "rbxassetid://6101261905"
-    groundThunder.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 40)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 0, 0))
-    })
-    groundThunder.LightEmission = 1
-    groundThunder.LightInfluence = 0
-    groundThunder.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.4),
-        NumberSequenceKeypoint.new(0.4, 1.4),
-        NumberSequenceKeypoint.new(1, 0)
-    })
-    groundThunder.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.1),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    groundThunder.Lifetime = NumberRange.new(0.4, 0.7)
-    groundThunder.Rate = 75
-    groundThunder.Speed = NumberRange.new(3, 6)
-    groundThunder.SpreadAngle = Vector2.new(110, 110)
-    groundThunder.EmissionDirection = Enum.NormalId.Bottom
-    groundThunder.Enabled = AuraState.auraEnabled
-    table.insert(AuraState.emitters, groundThunder)
 end
 
--- ========================================================
--- WATCHDOG & RESPAWN RE-APPLY
--- ========================================================
-local function attachCharacterTracks(character)
-    if not isScriptAlive or not character then return end
-    task.spawn(setup, character)
-end
-
-if player.Character then task.spawn(attachCharacterTracks, player.Character) end
+-- WATCHDOG RESPAWN
+if player.Character then task.spawn(setup, player.Character) end
 player.CharacterAdded:Connect(function(char)
-    task.spawn(attachCharacterTracks, char)
+    task.spawn(setup, char)
 end)
 
--- Auto start smooth track on spawn
+-- AUTO-ENABLE ANIMATIONS ON EXECUTION
 task.spawn(function()
-    task.wait(1.5)
+    task.wait(1)
     if player.Character then
-        local ok = applyAdidasAnimations()
-        if ok then
+        local success = applyAdidasAnimations()
+        if success then
             animLabel.Text = "Aɴɪᴍ Øɴ"
             animDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
         end
     end
 end)
 
-player.CharacterAdded:Connect(function(char)
-    activeTracks = {}
-    task.wait(1.5)
-    if isAnimOn or AuraState.animEnabled then 
-        applyAdidasAnimations() 
-    end
+player.CharacterAdded:Connect(function()
+    task.wait(1.2)
+    if isAnimOn or AuraState.animEnabled then applyAdidasAnimations() end
 end)
