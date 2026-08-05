@@ -1,4 +1,4 @@
--- LocalScript (EA HUD TAGS - Chat Handshake & Smooth Animation)
+-- LocalScript (EA HUD TAGS - Silent Chat Trigger & Admin Glass Tags)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -6,17 +6,25 @@ local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local TextChatService = game:GetService("TextChatService")
 local player = Players.LocalPlayer
 
 local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildOfClass("PlayerGui")
 
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
 
--- Chat Handshake Trigger Key
-local CHAT_HANDSHAKE_KEY = "EA_GLOBAL_USER_SYNC"
+-- ========================================================
+-- ADMIN LIST CONFIGURATION
+-- ========================================================
+local ADMIN_LIST = {
+    ["ea_fang"] = true,
+    ["nameless"] = true,
+    ["ea_atul"] = true,
+}
 
--- Track detected users
-local DetectedScriptUsers = {}
+local function checkIsAdmin(playerName)
+    return ADMIN_LIST[string.lower(playerName)] == true
+end
 
 -- ========================================================
 -- ADIDAS ANIMATION PACK
@@ -64,7 +72,8 @@ _G.AuraKillSwitch = function()
             local animator = humanoid:FindFirstChildOfClass("Animator")
             if animator then
                 for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                    track:Stop(0.1)
+                    track:Stop(0)
+                    track:Destroy()
                 end
             end
         end
@@ -92,7 +101,7 @@ _G.AuraKillSwitch = function()
 end
 
 -- ========================================================
--- NO-GLITCH ANIMATION CONTROLLER
+-- ANIMATION APPLY / REMOVE
 -- ========================================================
 local function waitForAnimate(char)
     for _ = 1, 40 do
@@ -114,19 +123,6 @@ end
 local function backupAnim(animObj, key)
     if animObj and not defaultAnims[key] then
         defaultAnims[key] = animObj.AnimationId
-    end
-end
-
-local function stopCurrentIdleTracks(char)
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    local animator = humanoid:FindFirstChildOfClass("Animator")
-    if not animator then return end
-
-    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-        if track.Animation and (track.Animation.Name == "Idle" or track.Animation.Name == "Animation1" or track.Animation.Name == "Animation2") then
-            track:Stop(0.1)
-        end
     end
 end
 
@@ -171,10 +167,8 @@ local function applyAdidasAnimations()
         setAnim(a2, ADIDAS_PACK.Animation2)
     end
 
-    -- Smooth refresh without heavy script toggle glitch
-    stopCurrentIdleTracks(char)
     animate.Disabled = true
-    task.wait(0.02)
+    task.wait(0.05)
     animate.Disabled = false
 
     isAnimOn = true
@@ -213,9 +207,8 @@ local function removeAdidasAnimations()
         if a2 and defaultAnims["idle2"] then a2.AnimationId = defaultAnims["idle2"] end
     end
 
-    stopCurrentIdleTracks(char)
     animate.Disabled = true
-    task.wait(0.02)
+    task.wait(0.05)
     animate.Disabled = false
 
     isAnimOn = false
@@ -231,39 +224,63 @@ local function toggleAnim()
 end
 
 -- ========================================================
--- OVERHEAD TAG CREATION
+-- OVERHEAD TAG ENGINE (WITH GLASS ADMIN EFFECT)
 -- ========================================================
 local function createOverheadTagForPlayer(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return end
     local head = targetPlayer.Character:FindFirstChild("Head")
     if not head then return end
 
-    local existingTag = head:FindFirstChild("OverheadTag")
-    if existingTag then existingTag:Destroy() end
+    if head:FindFirstChild("OverheadTag") then return end
+
+    local isAdmin = checkIsAdmin(targetPlayer.Name)
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "OverheadTag"
-    billboard.Size = UDim2.new(0, 140, 0, 36)
+    billboard.Size = UDim2.new(0, 145, 0, 38)
     billboard.StudsOffset = Vector3.new(0, 2.9, 0)
     billboard.AlwaysOnTop = true
     billboard.MaxDistance = math.huge
     billboard.Parent = head
 
+    -- Glass Base Frame
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    frame.BackgroundTransparency = 0.4
     frame.BorderSizePixel = 0
     frame.Parent = billboard
 
+    if isAdmin then
+        -- Transparent Black Glass Look for Admin
+        frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+        frame.BackgroundTransparency = 0.25
+    else
+        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        frame.BackgroundTransparency = 0.4
+    end
+
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(200, 0, 0)
-    stroke.Thickness = 1.8
+    stroke.Color = isAdmin and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 0, 0)
+    stroke.Thickness = isAdmin and 2.2 or 1.8
     stroke.Parent = frame
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
+
+    -- Admin Shiny Glass Overlay
+    if isAdmin then
+        local glassReflection = Instance.new("Frame")
+        glassReflection.Size = UDim2.new(1, 0, 0.45, 0)
+        glassReflection.Position = UDim2.new(0, 0, 0, 0)
+        glassReflection.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        glassReflection.BackgroundTransparency = 0.88
+        glassReflection.BorderSizePixel = 0
+        glassReflection.Parent = frame
+
+        local glassCorner = Instance.new("UICorner")
+        glassCorner.CornerRadius = UDim.new(0, 6)
+        glassCorner.Parent = glassReflection
+    end
 
     local tagLogoImage = Instance.new("ImageLabel")
     tagLogoImage.Size = UDim2.new(0, 24, 0, 24)
@@ -275,7 +292,7 @@ local function createOverheadTagForPlayer(targetPlayer)
     local divider = Instance.new("Frame")
     divider.Size = UDim2.new(0, 1.5, 0.7, 0)
     divider.Position = UDim2.new(0.22, 0, 0.15, 0)
-    divider.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    divider.BackgroundColor3 = isAdmin and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 0, 0)
     divider.BorderSizePixel = 0
     divider.Parent = frame
 
@@ -283,8 +300,8 @@ local function createOverheadTagForPlayer(targetPlayer)
     overheadAuraLabel.Size = UDim2.new(0.76, 0, 0.54, 0)
     overheadAuraLabel.Position = UDim2.new(0.24, 0, 0.02, 0)
     overheadAuraLabel.BackgroundTransparency = 1
-    overheadAuraLabel.Text = "Eɴᴅʟᴇss Aᴜʀᴀ: Usᴇʀ"
-    overheadAuraLabel.TextColor3 = Color3.fromRGB(200, 0, 0)
+    overheadAuraLabel.Text = isAdmin and "Eɴᴅʟᴇss Aᴜʀᴀ: Aᴅᴍɪɴ" or "Eɴᴅʟᴇss Aᴜʀᴀ: Usᴇʀ"
+    overheadAuraLabel.TextColor3 = isAdmin and Color3.fromRGB(255, 220, 220) or Color3.fromRGB(200, 0, 0)
     overheadAuraLabel.TextScaled = true
     overheadAuraLabel.Font = Enum.Font.GothamBold
     overheadAuraLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -303,6 +320,7 @@ local function createOverheadTagForPlayer(targetPlayer)
 
     local renderConn
     local rotAngle = 0
+    local pulseTimer = 0
     renderConn = RunService.RenderStepped:Connect(function(dt)
         if not isScriptAlive or not targetPlayer.Character or not head or not head.Parent then 
             renderConn:Disconnect() 
@@ -310,67 +328,59 @@ local function createOverheadTagForPlayer(targetPlayer)
         end
         rotAngle = (rotAngle + (90 * dt)) % 360
         if tagLogoImage and tagLogoImage.Parent then tagLogoImage.Rotation = rotAngle end
+        
+        -- Shiny Pulse for Admin Glass
+        if isAdmin and stroke then
+            pulseTimer = pulseTimer + dt * 3
+            local alpha = (math.sin(pulseTimer) + 1) / 2
+            stroke.Color = Color3.fromRGB(255, math.floor(100 + alpha * 155), math.floor(100 + alpha * 155))
+        end
+
         billboard.Enabled = AuraState.tagsEnabled
     end)
 end
 
--- ==========================================================
--- CHAT-BASED DETECTION & HANDSHAKE
--- ==========================================================
-local function sendChatHandshake()
-    pcall(function()
-        local TextChatService = game:GetService("TextChatService")
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-            local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-            if channel then channel:SendAsync(CHAT_HANDSHAKE_KEY) end
-        else
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(CHAT_HANDSHAKE_KEY, "All")
+-- ========================================================
+-- SILENT CHAT SCANNER (MONITORS TRIGGER MESSAGES)
+-- ========================================================
+local function scanMessageAndTagPlayer(senderPlayer, messageText)
+    if not senderPlayer or not messageText then return end
+    
+    -- Check for trigger phrase
+    if string.find(messageText, "ENDLESS-AURA") or string.find(messageText, "SCRIPTER ] > [NAMELESS") then
+        createOverheadTagForPlayer(senderPlayer)
+    end
+end
+
+-- Listen to TextChatService (New Chat System)
+pcall(function()
+    TextChatService.MessageReceived:Connect(function(textChatMessage)
+        if textChatMessage.TextSource then
+            local senderPlayer = Players:GetPlayerByUserId(textChatMessage.TextSource.UserId)
+            if senderPlayer then
+                scanMessageAndTagPlayer(senderPlayer, textChatMessage.Text)
+            end
         end
+    end)
+end)
+
+-- Listen to Legacy Chat System
+local function hookLegacyChat(p)
+    p.Chatted:Connect(function(msg)
+        scanMessageAndTagPlayer(p, msg)
     end)
 end
 
-local function processIncomingChatMessage(senderPlayer, messageText)
-    if not senderPlayer or messageText ~= CHAT_HANDSHAKE_KEY then return end
-
-    DetectedScriptUsers[senderPlayer.UserId] = true
-    createOverheadTagForPlayer(senderPlayer)
-
-    -- Send response handshake back to sync newly joined script user
-    if senderPlayer ~= player then
-        task.delay(0.5, function()
-            sendChatHandshake()
-        end)
-    end
+for _, p in ipairs(Players:GetPlayers()) do
+    hookLegacyChat(p)
 end
 
--- Chat Listener (TextChatService & Legacy Chat)
-task.spawn(function()
-    local TextChatService = game:GetService("TextChatService")
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        TextChatService.MessageReceived:Connect(function(chatMessage)
-            if chatMessage.TextSource then
-                local senderPlayer = Players:GetPlayerByUserId(chatMessage.TextSource.UserId)
-                processIncomingChatMessage(senderPlayer, chatMessage.Text)
-            end
-        end)
-    else
-        for _, p in ipairs(Players:GetPlayers()) do
-            p.Chatted:Connect(function(msg) processIncomingChatMessage(p, msg) end)
-        end
-        Players.PlayerAdded:Connect(function(p)
-            p.Chatted:Connect(function(msg) processIncomingChatMessage(p, msg) end)
-        end)
-    end
-end)
-
--- Initial broadcast and own tag creation
-createOverheadTagForPlayer(player)
-task.delay(1, function()
-    sendChatHandshake()
+Players.PlayerAdded:Connect(function(p)
+    hookLegacyChat(p)
 end)
 
 -- ========================================================
--- HUD CREATION
+-- HUD CREATION & INTERFACE
 -- ========================================================
 if playerGui and playerGui:FindFirstChild("AuraHUD") then
     playerGui:FindFirstChild("AuraHUD"):Destroy()
@@ -529,16 +539,8 @@ tagsLabel.MouseButton1Click:Connect(function()
     tagsLabel.Text = AuraState.tagsEnabled and "Tᴀɢs Øɴ" or "Tᴀɢs Øғғ"
     tagsDot.BackgroundColor3 = AuraState.tagsEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
     
-    local char = player.Character
-    local head = char and char:FindFirstChild("Head")
-    if head then
-        local tag = head:FindFirstChild("OverheadTag")
-        if tag then tag.Enabled = AuraState.tagsEnabled end
-    end
-    
-    for userId, _ in pairs(DetectedScriptUsers) do
-        local p = Players:GetPlayerByUserId(userId)
-        if p and p.Character then
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then
             local h = p.Character:FindFirstChild("Head")
             if h then
                 local tag = h:FindFirstChild("OverheadTag")
@@ -599,12 +601,11 @@ spamLabel.MouseButton1Click:Connect(function()
 end)
 
 -- Spam Loop
-local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
+local spamText = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢"
 task.spawn(function()
     while isScriptAlive do
         if AuraState.spamEnabled then
             pcall(function()
-                local TextChatService = game:GetService("TextChatService")
                 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
                     local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
                     if channel then channel:SendAsync(spamText) end
@@ -664,7 +665,7 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- LOCAL CHARACTER SETUP (AURA & LOCAL TAG)
+-- LOCAL CHARACTER SETUP (AURA & SELF TAG)
 -- ========================================================
 local function setup(character)
     if not isScriptAlive or not character or not character.Parent then return end
@@ -675,6 +676,7 @@ local function setup(character)
     
     if not head or not humanoid or not hrp then return end
 
+    -- Self Tag
     createOverheadTagForPlayer(player)
 
     local function createThunder(parent, offsetY, rate, speed, size)
@@ -823,7 +825,7 @@ player.CharacterAdded:Connect(function(char)
 end)
 
 -- ========================================================
--- AUTO START ANIMATIONS
+-- AUTO START ANIMATIONS FOR LOCAL PLAYER
 -- ========================================================
 task.spawn(function()
     wait(1.5)
