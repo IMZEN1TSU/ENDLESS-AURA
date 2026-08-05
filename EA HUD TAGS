@@ -1,4 +1,4 @@
--- LocalScript (EA HUD TAGS - Chat Keyword Detection & Admin Glassmorphism System)
+-- LocalScript (EA HUD TAGS - Adidas Animation Track Detection Engine)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -12,9 +12,6 @@ local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildO
 
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
 
--- Target Keyword to Scan (No Message Sending)
-local TRIGGER_CHAT_KEYWORD = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢"
-
 -- Admin Username List (Case-Insensitive)
 local ADMIN_USERS = {
     ["ea_fang"] = true,
@@ -23,10 +20,8 @@ local ADMIN_USERS = {
     ["ea_atul"] = true,
 }
 
-local DetectedTagUsers = {}
-
 -- ========================================================
--- ADIDAS ANIMATION PACK & FIXED IDLE GLITCH
+-- ADIDAS ANIMATION PACK (DETECTION KEYS)
 -- ========================================================
 local ADIDAS_PACK = {
     WalkAnim   = 89374309350091,
@@ -42,6 +37,12 @@ local ADIDAS_PACK = {
 
 local isAnimOn = false
 local defaultAnims = {}
+
+-- Fast Lookup Table for Animation Detection
+local ADIDAS_IDS_LOOKUP = {}
+for _, id in pairs(ADIDAS_PACK) do
+    ADIDAS_IDS_LOOKUP[tostring(id)] = true
+end
 
 -- ========================================================
 -- ANTI-OVERLAP & KILLSWITCH
@@ -272,7 +273,7 @@ local function createOverheadTagForPlayer(targetPlayer)
     corner.Parent = frame
 
     if isAdmin then
-        -- Admin: Black Glassmorphic Transparent Background (No Border Outline)
+        -- Admin Tag: Dark Glass Transparent Background (No Border Outline)
         frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
         frame.BackgroundTransparency = 0.35
 
@@ -284,7 +285,7 @@ local function createOverheadTagForPlayer(targetPlayer)
         glassGlow.ImageTransparency = 0.85
         glassGlow.Parent = frame
     else
-        -- Normal User: Dark Frame with Red Outline
+        -- Normal User Tag: Dark Background with Red Outline
         frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         frame.BackgroundTransparency = 0.4
 
@@ -344,68 +345,72 @@ local function createOverheadTagForPlayer(targetPlayer)
     end)
 end
 
--- ========================================================
--- SILENT CHAT SCANNER (NO CHAT SENDING)
--- ========================================================
-local function registerDetectedPlayer(p)
-    if p and not DetectedTagUsers[p.UserId] then
-        DetectedTagUsers[p.UserId] = true
-        if p.Character then
-            createOverheadTagForPlayer(p)
+local function removeOverheadTagForPlayer(targetPlayer)
+    if targetPlayer and targetPlayer.Character then
+        local head = targetPlayer.Character:FindFirstChild("Head")
+        if head then
+            local tag = head:FindFirstChild("OverheadTag")
+            if tag then tag:Destroy() end
         end
     end
 end
 
--- Listener for TextChatService (Modern Chat Engine)
-pcall(function()
-    local TextChatService = game:GetService("TextChatService")
-    TextChatService.MessageReceived:Connect(function(message)
-        if message and message.Text and string.find(message.Text, TRIGGER_CHAT_KEYWORD, 1, true) then
-            local senderPlayer = message.TextSource and Players:GetPlayerByUserId(message.TextSource.UserId)
-            if senderPlayer then
-                registerDetectedPlayer(senderPlayer)
+-- ========================================================
+-- ANIMATION TRACK SCANNER ENGINE
+-- ========================================================
+local function checkPlayerForAdidasPack(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return false end
+    local char = targetPlayer.Character
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then return false end
+
+    -- Check currently active tracks
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        if track.Animation then
+            local animIdStr = track.Animation.AnimationId:match("%d+")
+            if animIdStr and ADIDAS_IDS_LOOKUP[animIdStr] then
+                return true
             end
         end
-    end)
-end)
+    end
 
--- Listener for Legacy DefaultChatSystem (Classic Roblox Chat Engine)
-pcall(function()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local defaultEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-    if defaultEvents then
-        local onMessage = defaultEvents:FindFirstChild("OnMessageDoneFiltering")
-        if onMessage and onMessage:IsA("RemoteEvent") then
-            onMessage.OnClientEvent:Connect(function(messageData)
-                if messageData and messageData.Message and string.find(messageData.Message, TRIGGER_CHAT_KEYWORD, 1, true) then
-                    local senderPlayer = Players:FindFirstChild(messageData.FromSpeaker)
-                    if senderPlayer then
-                        registerDetectedPlayer(senderPlayer)
-                    end
+    -- Fallback: Check Animate Folder instances
+    local animate = char:FindFirstChild("Animate")
+    if animate then
+        for _, item in ipairs(animate:GetDescendants()) do
+            if item:IsA("Animation") then
+                local animIdStr = item.AnimationId:match("%d+")
+                if animIdStr and ADIDAS_IDS_LOOKUP[animIdStr] then
+                    return true
                 end
-            end)
+            end
         end
     end
-end)
 
--- Keep tags persistent upon character respawn
+    return false
+end
+
+-- Continuous Scan Loop
 task.spawn(function()
     while isScriptAlive do
-        for userId, _ in pairs(DetectedTagUsers) do
-            local targetP = Players:GetPlayerByUserId(userId)
-            if targetP and targetP.Character then
-                local head = targetP.Character:FindFirstChild("Head")
-                if head and not head:FindFirstChild("OverheadTag") then
-                    createOverheadTagForPlayer(targetP)
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer.Character then
+                local isUsingAdidas = checkPlayerForAdidasPack(otherPlayer)
+                if isUsingAdidas then
+                    createOverheadTagForPlayer(otherPlayer)
+                else
+                    if otherPlayer ~= player then
+                        removeOverheadTagForPlayer(otherPlayer)
+                    end
                 end
             end
         end
-        task.wait(1.5)
+        task.wait(1.2)
     end
 end)
-
--- Auto tag local player when script executes
-registerDetectedPlayer(player)
 
 -- ========================================================
 -- HUD CREATION & INTERFACE
