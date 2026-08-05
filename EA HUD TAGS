@@ -1,4 +1,4 @@
--- LocalScript (Rejoin / Strict Chat Trigger Control)
+-- LocalScript (Spam Fixed - OFF by default + Multi-User Overhead Tag Handshake)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -15,9 +15,6 @@ local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildO
 
 -- Logo Asset
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
-
--- Unique Chat Signal Trigger
-local CHAT_TRIGGER = "💢Aᴜʀᴀ"
 
 -- ========================================================
 -- ADIDAS ANIMATION PACK
@@ -38,7 +35,7 @@ local isAnimOn = false
 local defaultAnims = {}
 
 -- ========================================================
--- ANTI-OVERLAP
+-- ANTI-OVERLAP & GLOBAL STATE
 -- ========================================================
 if _G.AuraKillSwitch then
     _G.AuraKillSwitch()
@@ -48,7 +45,7 @@ _G.AuraState = {
     tagsEnabled = true,   
     auraEnabled = true,   
     animEnabled = true,   
-    spamEnabled = false,  
+    spamEnabled = false,  -- SPAM OFF by default
     hudVisible = true,
     emitters = {},
     currentTrack = nil
@@ -85,135 +82,14 @@ _G.AuraKillSwitch = function()
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p.Character then
-            local head = p.Character:FindFirstChild("Head")
-            if head and head:FindFirstChild("OverheadTag") then
-                head.OverheadTag:Destroy()
-            end
-        end
-    end
-end
-
--- ========================================================
--- CHAT SYSTEM LOGIC
--- ========================================================
-local function sendChatMessage(message)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-        if targetChannel then targetChannel:SendAsync(message) end
-    else
-        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-        if sayMsgReq then sayMsgReq:FireServer(message, "All") end
-    end
-end
-
--- Overhead Tag Function
-local function attachOverheadTag(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character then return end
-    local head = targetPlayer.Character:FindFirstChild("Head")
-    if not head or head:FindFirstChild("OverheadTag") then return end
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "OverheadTag"
-    billboard.Size = UDim2.new(0, 140, 0, 36)
-    billboard.StudsOffset = Vector3.new(0, 2.9, 0)
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = math.huge
-    billboard.Parent = head
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel = 0
-    frame.Parent = billboard
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(200, 0, 0)
-    stroke.Thickness = 1.8
-    stroke.Parent = frame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = frame
-
-    local tagLogoImage = Instance.new("ImageLabel")
-    tagLogoImage.Name = "TagLogo"
-    tagLogoImage.Size = UDim2.new(0, 24, 0, 24)
-    tagLogoImage.Position = UDim2.new(0.02, 0, 0.5, -12)
-    tagLogoImage.BackgroundTransparency = 1
-    tagLogoImage.Image = CUSTOM_LOGO_ID
-    tagLogoImage.Parent = frame
-
-    local divider = Instance.new("Frame")
-    divider.Size = UDim2.new(0, 1.5, 0.7, 0)
-    divider.Position = UDim2.new(0.22, 0, 0.15, 0)
-    divider.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-    divider.BorderSizePixel = 0
-    divider.Parent = frame
-
-    local overheadAuraLabel = Instance.new("TextLabel")
-    overheadAuraLabel.Size = UDim2.new(0.76, 0, 0.54, 0)
-    overheadAuraLabel.Position = UDim2.new(0.24, 0, 0.02, 0)
-    overheadAuraLabel.BackgroundTransparency = 1
-    overheadAuraLabel.Text = "Eɴᴅʟᴇss Aᴜʀᴀ: Usᴇʀ"
-    overheadAuraLabel.TextColor3 = Color3.fromRGB(200, 0, 0)
-    overheadAuraLabel.TextScaled = true
-    overheadAuraLabel.Font = Enum.Font.GothamBold
-    overheadAuraLabel.TextXAlignment = Enum.TextXAlignment.Left
-    overheadAuraLabel.Parent = frame
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(0.76, 0, 0.38, 0)
-    nameLabel.Position = UDim2.new(0.24, 0, 0.57, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = "@" .. targetPlayer.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.Gotham
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Parent = frame
-end
-
--- Strict Chat Listener: Direct Trigger Detection Only
-local function setupChatListener(p)
-    p.Chatted:Connect(function(msg)
-        if string.find(msg, CHAT_TRIGGER) then
-            attachOverheadTag(p)
-        end
-    end)
-end
-
--- Initialize Chat Listeners
-for _, p in ipairs(Players:GetPlayers()) do
-    setupChatListener(p)
-end
-
-Players.PlayerAdded:Connect(function(p)
-    setupChatListener(p)
-end)
-
--- Tag Rotation Loop
-local rotAngle = 0
-RunService.RenderStepped:Connect(function(dt)
-    if not isScriptAlive then return end
-    rotAngle = (rotAngle + (90 * dt)) % 360
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character then
-            local head = p.Character:FindFirstChild("Head")
-            if head then
-                local tag = head:FindFirstChild("OverheadTag")
-                if tag then
-                    tag.Enabled = AuraState.tagsEnabled
-                    local logo = tag:FindFirstChild("Frame") and tag.Frame:FindFirstChild("TagLogo")
-                    if logo then
-                        logo.Rotation = rotAngle
-                    end
+            for _, child in ipairs(p.Character:GetDescendants()) do
+                if child.Name == "EACircle" or child.Name == "OverheadTag" or child.Name == "AuraAttachment" then
+                    child:Destroy()
                 end
             end
         end
     end
-end)
+end
 
 -- ========================================================
 -- ANIMATION FUNCTIONS
@@ -485,7 +361,7 @@ local function createBox(name, text, withDot, interactive)
     return box, label, dot
 end
 
--- HUD TOGGLES
+-- Tags Toggle
 local _, tagsLabel, tagsDot = createBox("TagsToggle", "Tᴀɢs Øɴ", true, true)
 tagsLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -493,8 +369,19 @@ tagsLabel.MouseButton1Click:Connect(function()
     AuraState.tagsEnabled = not AuraState.tagsEnabled
     tagsLabel.Text = AuraState.tagsEnabled and "Tᴀɢs Øɴ" or "Tᴀɢs Øғғ"
     tagsDot.BackgroundColor3 = AuraState.tagsEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
+    
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then
+            local head = p.Character:FindFirstChild("Head")
+            if head then
+                local tag = head:FindFirstChild("OverheadTag")
+                if tag then tag.Enabled = AuraState.tagsEnabled end
+            end
+        end
+    end
 end)
 
+-- Aura Toggle
 local _, auraLabel, auraDot = createBox("AuraToggle", "Aᴜʀᴀ Øɴ", true, true)
 auraLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -510,10 +397,12 @@ auraLabel.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Stats
 local _, fpsLabel = createBox("FPS", "Fᴘs: --", false, false)
 local _, pingLabel = createBox("Ping", "Pɪɴɢ: --ᴍs", false, false)
 local _, timeLabel = createBox("Time", "--:--", false, false)
 
+-- Anim Toggle
 local _, animLabel, animDot = createBox("AnimToggle", "Aɴɪᴍ Øɴ", true, true)
 animLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -524,6 +413,7 @@ animLabel.MouseButton1Click:Connect(function()
     AuraState.animEnabled = isAnimOn
 end)
 
+-- Spam Toggle
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
 spamLabel.Text = "Sᴘᴀᴍ Øғғ"
 spamDot.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
@@ -537,8 +427,18 @@ spamLabel.MouseButton1Click:Connect(function()
     spamDot.BackgroundColor3 = AuraState.spamEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
 end)
 
--- SPAM ENGINE
+-- Spam Engine
 local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
+
+local function sendChatMessage(message)
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if targetChannel then targetChannel:SendAsync(message) end
+    else
+        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+        if sayMsgReq then sayMsgReq:FireServer(message, "All") end
+    end
+end
 
 task.spawn(function()
     while isScriptAlive do
@@ -547,7 +447,7 @@ task.spawn(function()
     end
 end)
 
--- HUD LOGO TWEEN
+-- HUD Logo Tween
 local isTweeningHUD = false
 local currentRotation = 0
 
@@ -568,7 +468,7 @@ logoToggleBtn.MouseButton1Click:Connect(function()
     slideTween.Completed:Connect(function() isTweeningHUD = false end)
 end)
 
--- STATS UPDATES
+-- Stats Updates
 RunService.Heartbeat:Connect(function(dt)
     if not isScriptAlive then return end
     if dt > 0 then fpsLabel.Text = "Fᴘs: " .. math.floor(1 / dt) end
@@ -589,135 +489,345 @@ task.spawn(function()
     end
 end)
 
--- LOCAL AURA SETUP
-local function setup(character)
-    if not isScriptAlive or not character or not character.Parent then return end
-    local hrp = character:WaitForChild("HumanoidRootPart", 4)
-    if not hrp then return end
+-- ========================================================
+-- SCRIPT USERS DETECTOR (CHAT HANDSHAKE)
+-- ========================================================
+local SCRIPT_USERS = {}
+SCRIPT_USERS[player.UserId] = true
 
-    for _, child in ipairs(character:GetDescendants()) do
-        if child.Name == "AuraAttachment" then child:Destroy() end
+local HANDSHAKE_PREFIX = "[EA_PING_SYSTEM]:"
+
+local function broadcastPing()
+    local msg = HANDSHAKE_PREFIX .. tostring(player.UserId)
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if targetChannel then pcall(function() targetChannel:SendAsync(msg) end) end
+    else
+        local sayMsgReq = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+        if sayMsgReq then pcall(function() sayMsgReq:FireServer(msg, "All") end) end
     end
-
-    local function createThunder(parent, offsetY, rate, speed, size)
-        if not isScriptAlive or not parent or not parent.Parent then return end
-        local att = Instance.new("Attachment")
-        att.Name = "AuraAttachment"
-        att.Position = Vector3.new(0, offsetY, 0)
-        att.Parent = parent
-
-        local thunder = Instance.new("ParticleEmitter")
-        thunder.Parent = att
-        thunder.Texture = "rbxassetid://6101261905"
-        thunder.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 50)),
-            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(220, 0, 0)),
-            ColorSequenceKeypoint.new(0.8, Color3.fromRGB(255, 100, 100)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 0))
-        })
-        thunder.LightEmission = 1
-        thunder.LightInfluence = 0
-        thunder.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, size * 0.6),
-            NumberSequenceKeypoint.new(0.3, size * 1.4),
-            NumberSequenceKeypoint.new(0.7, size * 0.9),
-            NumberSequenceKeypoint.new(1, 0)
-        })
-        thunder.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(0.4, 0.15),
-            NumberSequenceKeypoint.new(1, 1)
-        })
-        thunder.Lifetime = NumberRange.new(0.3, 0.6)
-        thunder.Rate = rate
-        thunder.Speed = NumberRange.new(speed, speed + 4)
-        thunder.SpreadAngle = Vector2.new(90, 90)
-        thunder.RotSpeed = NumberRange.new(-250, 250)
-        thunder.Rotation = NumberRange.new(0, 360)
-        thunder.ZOffset = 0.4
-
-        local glow = Instance.new("ParticleEmitter")
-        glow.Parent = att
-        glow.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 0, 0)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 0))
-        })
-        glow.LightEmission = 1
-        glow.LightInfluence = 0
-        glow.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, size * 2.0),
-            NumberSequenceKeypoint.new(0.4, size * 1.4),
-            NumberSequenceKeypoint.new(1, 0)
-        })
-        glow.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.25),
-            NumberSequenceKeypoint.new(0.5, 0.55),
-            NumberSequenceKeypoint.new(1, 1)
-        })
-        glow.Lifetime = NumberRange.new(0.3, 0.5)
-        glow.Rate = rate * 0.7
-        glow.Speed = NumberRange.new(1, 2.5)
-        glow.SpreadAngle = Vector2.new(360, 360)
-
-        local smoke = Instance.new("ParticleEmitter")
-        smoke.Parent = att
-        smoke.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 0, 0)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 0, 0))
-        })
-        smoke.LightEmission = 0.2
-        smoke.LightInfluence = 0.5
-        smoke.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, size * 0.8),
-            NumberSequenceKeypoint.new(0.5, size * 2.2),
-            NumberSequenceKeypoint.new(1, 0)
-        })
-        smoke.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.5),
-            NumberSequenceKeypoint.new(0.6, 0.8),
-            NumberSequenceKeypoint.new(1, 1)
-        })
-        smoke.Lifetime = NumberRange.new(0.4, 0.8)
-        smoke.Rate = rate * 0.4
-        smoke.Speed = NumberRange.new(1, 3)
-        smoke.SpreadAngle = Vector2.new(45, 45)
-
-        thunder.Enabled = AuraState.auraEnabled
-        glow.Enabled = AuraState.auraEnabled
-        smoke.Enabled = AuraState.auraEnabled
-
-        table.insert(AuraState.emitters, thunder)
-        table.insert(AuraState.emitters, glow)
-        table.insert(AuraState.emitters, smoke)
-    end
-
-    for _, obj in ipairs(character:GetChildren()) do
-        if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
-            createThunder(obj, 0, 60, 4, 1.2)
-        end
-    end
-    createThunder(hrp, 0, 70, 5, 1.4)
 end
 
-if player.Character then task.spawn(setup, player.Character) end
-player.CharacterAdded:Connect(function(char)
-    defaultAnims = {}
-    task.spawn(setup, char)
-    
-    if isAnimOn or AuraState.animEnabled then
-        applyAdidasAnimations()
+task.spawn(function()
+    while isScriptAlive do
+        broadcastPing()
+        task.wait(10)
     end
 end)
 
+local setupPlayerTagAndAura
+
+local function handleIncomingMessage(senderUserId)
+    if senderUserId and not SCRIPT_USERS[senderUserId] then
+        SCRIPT_USERS[senderUserId] = true
+        local targetPlayer = Players:GetPlayerByUserId(senderUserId)
+        if targetPlayer and targetPlayer.Character then
+            task.spawn(setupPlayerTagAndAura, targetPlayer, targetPlayer.Character)
+        end
+    end
+end
+
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    TextChatService.MessageReceived:Connect(function(textChatMessage)
+        local text = textChatMessage.Text or ""
+        if string.sub(text, 1, #HANDSHAKE_PREFIX) == HANDSHAKE_PREFIX then
+            local rawId = string.sub(text, #HANDSHAKE_PREFIX + 1)
+            local idNum = tonumber(rawId)
+            if idNum then handleIncomingMessage(idNum) end
+        end
+    end)
+else
+    local function connectPlayerChat(p)
+        p.Chatted:Connect(function(msg)
+            if string.sub(msg, 1, #HANDSHAKE_PREFIX) == HANDSHAKE_PREFIX then
+                local rawId = string.sub(msg, #HANDSHAKE_PREFIX + 1)
+                local idNum = tonumber(rawId)
+                if idNum then handleIncomingMessage(idNum) end
+            end
+        end)
+    end
+    Players.PlayerAdded:Connect(connectPlayerChat)
+    for _, p in ipairs(Players:GetPlayers()) do connectPlayerChat(p) end
+end
+
+-- ========================================================
+-- CHARACTER SETUP & OVERHEAD TAGS
+-- ========================================================
+function setupPlayerTagAndAura(targetPlayer, character)
+    if not isScriptAlive or not character or not character.Parent then return end
+    if not SCRIPT_USERS[targetPlayer.UserId] then return end
+
+    local head = character:WaitForChild("Head", 4)
+    local humanoid = character:WaitForChild("Humanoid", 4)
+    local hrp = character:WaitForChild("HumanoidRootPart", 4)
+    
+    if not head or not humanoid or not hrp then return end
+
+    for _, child in ipairs(head:GetChildren()) do
+        if child.Name == "EACircle" or child.Name == "OverheadTag" then
+            child:Destroy()
+        end
+    end
+
+    -- Overhead Tag Setup
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "OverheadTag"
+    billboard.Size = UDim2.new(0, 140, 0, 36)
+    billboard.StudsOffset = Vector3.new(0, 2.9, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = math.huge
+    billboard.Parent = head
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.4
+    frame.BorderSizePixel = 0
+    frame.Parent = billboard
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(200, 0, 0)
+    stroke.Thickness = 1.8
+    stroke.Parent = frame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = frame
+
+    local tagLogoImage = Instance.new("ImageLabel")
+    tagLogoImage.Size = UDim2.new(0, 24, 0, 24)
+    tagLogoImage.Position = UDim2.new(0.02, 0, 0.5, -12)
+    tagLogoImage.BackgroundTransparency = 1
+    tagLogoImage.Image = CUSTOM_LOGO_ID
+    tagLogoImage.Parent = frame
+
+    local divider = Instance.new("Frame")
+    divider.Size = UDim2.new(0, 1.5, 0.7, 0)
+    divider.Position = UDim2.new(0.22, 0, 0.15, 0)
+    divider.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    divider.BorderSizePixel = 0
+    divider.Parent = frame
+
+    local overheadAuraLabel = Instance.new("TextLabel")
+    overheadAuraLabel.Size = UDim2.new(0.76, 0, 0.54, 0)
+    overheadAuraLabel.Position = UDim2.new(0.24, 0, 0.02, 0)
+    overheadAuraLabel.BackgroundTransparency = 1
+    overheadAuraLabel.Text = "Eɴᴅʟᴇss Aᴜʀᴀ: Usᴇʀ"
+    overheadAuraLabel.TextColor3 = Color3.fromRGB(200, 0, 0)
+    overheadAuraLabel.TextScaled = true
+    overheadAuraLabel.Font = Enum.Font.GothamBold
+    overheadAuraLabel.TextXAlignment = Enum.TextXAlignment.Left
+    overheadAuraLabel.Parent = frame
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0.76, 0, 0.38, 0)
+    nameLabel.Position = UDim2.new(0.24, 0, 0.57, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "@" .. targetPlayer.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = frame
+
+    local renderConn
+    local rotAngle = 0
+    renderConn = RunService.RenderStepped:Connect(function(dt)
+        if not isScriptAlive or not character or not character.Parent or not head or not head.Parent then 
+            renderConn:Disconnect() 
+            return 
+        end
+        rotAngle = (rotAngle + (90 * dt)) % 360
+        if tagLogoImage and tagLogoImage.Parent then tagLogoImage.Rotation = rotAngle end
+        billboard.Enabled = AuraState.tagsEnabled
+    end)
+
+    -- Particle Aura Effects (Sirf Apne Player Par Visual Experience Ke Liye)
+    if targetPlayer == player then
+        local function createThunder(parent, offsetY, rate, speed, size)
+            if not isScriptAlive or not parent or not parent.Parent then return end
+            local att = Instance.new("Attachment")
+            att.Name = "AuraAttachment"
+            att.Position = Vector3.new(0, offsetY, 0)
+            att.Parent = parent
+
+            local thunder = Instance.new("ParticleEmitter")
+            thunder.Parent = att
+            thunder.Texture = "rbxassetid://6101261905"
+            thunder.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 50)),
+                ColorSequenceKeypoint.new(0.4, Color3.fromRGB(220, 0, 0)),
+                ColorSequenceKeypoint.new(0.8, Color3.fromRGB(255, 100, 100)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 0))
+            })
+            thunder.LightEmission = 1
+            thunder.LightInfluence = 0
+            thunder.Size = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, size * 0.6),
+                NumberSequenceKeypoint.new(0.3, size * 1.4),
+                NumberSequenceKeypoint.new(0.7, size * 0.9),
+                NumberSequenceKeypoint.new(1, 0)
+            })
+            thunder.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(0.4, 0.15),
+                NumberSequenceKeypoint.new(1, 1)
+            })
+            thunder.Lifetime = NumberRange.new(0.3, 0.6)
+            thunder.Rate = rate
+            thunder.Speed = NumberRange.new(speed, speed + 4)
+            thunder.SpreadAngle = Vector2.new(90, 90)
+            thunder.RotSpeed = NumberRange.new(-250, 250)
+            thunder.Rotation = NumberRange.new(0, 360)
+            thunder.ZOffset = 0.4
+
+            local glow = Instance.new("ParticleEmitter")
+            glow.Parent = att
+            glow.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 0, 0)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 0))
+            })
+            glow.LightEmission = 1
+            glow.LightInfluence = 0
+            glow.Size = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, size * 2.0),
+                NumberSequenceKeypoint.new(0.4, size * 1.4),
+                NumberSequenceKeypoint.new(1, 0)
+            })
+            glow.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.25),
+                NumberSequenceKeypoint.new(0.5, 0.55),
+                NumberSequenceKeypoint.new(1, 1)
+            })
+            glow.Lifetime = NumberRange.new(0.3, 0.5)
+            glow.Rate = rate * 0.7
+            glow.Speed = NumberRange.new(1, 2.5)
+            glow.SpreadAngle = Vector2.new(360, 360)
+
+            local smoke = Instance.new("ParticleEmitter")
+            smoke.Parent = att
+            smoke.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 0, 0)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 0, 0))
+            })
+            smoke.LightEmission = 0.2
+            smoke.LightInfluence = 0.5
+            smoke.Size = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, size * 0.8),
+                NumberSequenceKeypoint.new(0.5, size * 2.2),
+                NumberSequenceKeypoint.new(1, 0)
+            })
+            smoke.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.5),
+                NumberSequenceKeypoint.new(0.6, 0.8),
+                NumberSequenceKeypoint.new(1, 1)
+            })
+            smoke.Lifetime = NumberRange.new(0.4, 0.8)
+            smoke.Rate = rate * 0.4
+            smoke.Speed = NumberRange.new(1, 3)
+            smoke.SpreadAngle = Vector2.new(45, 45)
+
+            thunder.Enabled = AuraState.auraEnabled
+            glow.Enabled = AuraState.auraEnabled
+            smoke.Enabled = AuraState.auraEnabled
+
+            table.insert(AuraState.emitters, thunder)
+            table.insert(AuraState.emitters, glow)
+            table.insert(AuraState.emitters, smoke)
+        end
+
+        for _, obj in ipairs(character:GetChildren()) do
+            if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
+                createThunder(obj, 0, 60, 4, 1.2)
+            end
+        end
+        createThunder(hrp, 0, 70, 5, 1.4)
+
+        local groundAtt = Instance.new("Attachment")
+        groundAtt.Name = "AuraAttachment"
+        groundAtt.Position = Vector3.new(0, -3, 0)
+        groundAtt.Parent = hrp
+
+        local groundThunder = Instance.new("ParticleEmitter")
+        groundThunder.Parent = groundAtt
+        groundThunder.Texture = "rbxassetid://6101261905"
+        groundThunder.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 40)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 0, 0))
+        })
+        groundThunder.LightEmission = 1
+        groundThunder.LightInfluence = 0
+        groundThunder.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.4),
+            NumberSequenceKeypoint.new(0.4, 1.4),
+            NumberSequenceKeypoint.new(1, 0)
+        })
+        groundThunder.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.1),
+            NumberSequenceKeypoint.new(1, 1)
+        })
+        groundThunder.Lifetime = NumberRange.new(0.4, 0.7)
+        groundThunder.Rate = 75
+        groundThunder.Speed = NumberRange.new(3, 6)
+        groundThunder.SpreadAngle = Vector2.new(110, 110)
+        groundThunder.EmissionDirection = Enum.NormalId.Bottom
+        groundThunder.Enabled = AuraState.auraEnabled
+        table.insert(AuraState.emitters, groundThunder)
+    end
+end
+
+-- ========================================================
+-- WATCHDOG TRACKER
+-- ========================================================
+local function trackPlayer(p)
+    if p.Character then
+        task.spawn(setupPlayerTagAndAura, p, p.Character)
+    end
+    p.CharacterAdded:Connect(function(char)
+        task.spawn(setupPlayerTagAndAura, p, char)
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do trackPlayer(p) end
+Players.PlayerAdded:Connect(trackPlayer)
+
+task.spawn(function()
+    while isScriptAlive do
+        for _, p in ipairs(Players:GetPlayers()) do
+            if SCRIPT_USERS[p.UserId] and p.Character and p.Character.Parent then
+                local head = p.Character:FindFirstChild("Head")
+                if head and not head:FindFirstChild("OverheadTag") then
+                    task.spawn(setupPlayerTagAndAura, p, p.Character)
+                end
+            end
+        end
+        task.wait(1.5)
+    end
+end)
+
+-- ========================================================
 -- AUTO START ANIMATIONS
+-- ========================================================
 task.spawn(function()
     task.wait(1.5)
-    if player.Character then
+    local char = player.Character
+    if char and char.Parent then
         local success = applyAdidasAnimations()
         if success then
             animLabel.Text = "Aɴɪᴍ Øɴ"
             animDot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        else
+            task.wait(2)
+            if player.Character then applyAdidasAnimations() end
         end
+    end
+end)
+
+player.CharacterAdded:Connect(function(char)
+    defaultAnims = {}
+    task.wait(1.5)
+    if isAnimOn or AuraState.animEnabled then
+        applyAdidasAnimations()
     end
 end)
