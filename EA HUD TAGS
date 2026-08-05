@@ -1,4 +1,4 @@
--- LocalScript (EA HUD TAGS - Adidas Animation & Chat Trigger Engine)
+-- LocalScript (EA HUD TAGS - Chat Trigger & Adidas Animation Engine)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -7,14 +7,13 @@ local StatsService = game:GetService("Stats")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 local playerGui = player:WaitForChild("PlayerGui", 10) or player:FindFirstChildOfClass("PlayerGui")
 
 local CUSTOM_LOGO_ID = "rbxassetid://129299711445020"
-
--- Track users who fired the chat trigger
-local ChatTriggeredUsers = {}
+local TRIGGER_CHAT_MESSAGE = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢 Loaded..."
 
 -- Admin Username List (Case-Insensitive)
 local ADMIN_USERS = {
@@ -23,6 +22,9 @@ local ADMIN_USERS = {
     ["nameless82872262"] = true,
     ["ea_atul"] = true,
 }
+
+-- Players who executed the script (Triggered via Chat)
+local activeScriptUsers = {}
 
 -- ========================================================
 -- ADIDAS ANIMATION PACK (DETECTION KEYS)
@@ -42,6 +44,7 @@ local ADIDAS_PACK = {
 local isAnimOn = false
 local defaultAnims = {}
 
+-- Fast Lookup Table for Animation Detection
 local ADIDAS_IDS_LOOKUP = {}
 for _, id in pairs(ADIDAS_PACK) do
     ADIDAS_IDS_LOOKUP[tostring(id)] = true
@@ -104,7 +107,62 @@ _G.AuraKillSwitch = function()
 end
 
 -- ========================================================
--- ANIMATION APPLY / REMOVE SYSTEM
+-- CHAT TRIGGER DETECTION SYSTEM
+-- ========================================================
+local function registerScriptUser(targetPlayer)
+    if not targetPlayer then return end
+    activeScriptUsers[targetPlayer.Name] = true
+end
+
+local function listenToPlayerChat(targetPlayer)
+    if not targetPlayer then return end
+    
+    -- Legacy Chat
+    targetPlayer.Chatted:Connect(function(msg)
+        if msg == TRIGGER_CHAT_MESSAGE then
+            registerScriptUser(targetPlayer)
+        end
+    end)
+end
+
+-- TextChatService Listener
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    TextChatService.MessageReceived:Connect(function(message)
+        if message and message.TextSource then
+            local p = Players:GetPlayerByUserId(message.TextSource.UserId)
+            if p and message.Text == TRIGGER_CHAT_MESSAGE then
+                registerScriptUser(p)
+            end
+        end
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    listenToPlayerChat(p)
+end
+
+Players.PlayerAdded:Connect(function(p)
+    listenToPlayerChat(p)
+end)
+
+-- Auto Register LocalPlayer since this script is running
+registerScriptUser(player)
+
+-- Broadcast Load Message to Server Chat
+task.spawn(function()
+    task.wait(1)
+    pcall(function()
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+            if channel then channel:SendAsync(TRIGGER_CHAT_MESSAGE) end
+        else
+            ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(TRIGGER_CHAT_MESSAGE, "All")
+        end
+    end)
+end)
+
+-- ========================================================
+-- ANIMATION APPLY / REMOVE
 -- ========================================================
 local function waitForAnimate(char)
     for _ = 1, 40 do
@@ -247,44 +305,7 @@ local function toggleAnim()
 end
 
 -- ========================================================
--- CHAT TRIGGER DETECTION ENGINE
--- ========================================================
-local function processChatMessage(senderName, msg)
-    if string.find(msg, "EGO EMPIRE KA PAPA ENDLESS%-AURA") and string.find(msg, "Loaded") then
-        ChatTriggeredUsers[senderName] = true
-    end
-end
-
--- Listening via Legacy Chat
-for _, p in ipairs(Players:GetPlayers()) do
-    p.Chatted:Connect(function(msg)
-        processChatMessage(p.Name, msg)
-    end)
-end
-
-Players.PlayerAdded:Connect(function(p)
-    p.Chatted:Connect(function(msg)
-        processChatMessage(p.Name, msg)
-    end)
-end)
-
--- Listening via TextChatService (Modern Chat Systems)
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    TextChatService.OnIncomingMessage = function(message)
-        if message.TextSource then
-            local sender = Players:GetPlayerByUserId(message.TextSource.UserId)
-            if sender then
-                processChatMessage(sender.Name, message.Text)
-            end
-        end
-    end
-end
-
--- Auto trigger for LocalPlayer when script runs
-ChatTriggeredUsers[player.Name] = true
-
--- ========================================================
--- OVERHEAD TAG CREATION (ADMIN GLASS + BORDER SYSTEM)
+-- OVERHEAD TAG CREATION (RED BORDER INCLUDED FOR ADMIN)
 -- ========================================================
 local function createOverheadTagForPlayer(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return end
@@ -312,14 +333,14 @@ local function createOverheadTagForPlayer(targetPlayer)
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
 
-    -- Red Border Stroke for BOTH Admin and Regular Users
+    -- Red Border Outline for ALL Tags (Admin + Normal)
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(200, 0, 0)
     stroke.Thickness = 1.6
     stroke.Parent = frame
 
     if isAdmin then
-        -- Admin Tag: Dark Glass Background WITH Red Border
+        -- Admin Tag Styling with Dark Background + Red Stroke
         frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
         frame.BackgroundTransparency = 0.35
 
@@ -331,7 +352,7 @@ local function createOverheadTagForPlayer(targetPlayer)
         glassGlow.ImageTransparency = 0.85
         glassGlow.Parent = frame
     else
-        -- Regular Tag: Pure Dark Background
+        -- Normal User Tag Styling
         frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         frame.BackgroundTransparency = 0.4
     end
@@ -397,7 +418,7 @@ local function removeOverheadTagForPlayer(targetPlayer)
 end
 
 -- ========================================================
--- ANIMATION TRACK & CHAT SCANNER ENGINE
+-- SCANNER ENGINE (CHAT + ANIMATION VALIDATION)
 -- ========================================================
 local function checkPlayerForAdidasPack(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return false end
@@ -432,16 +453,16 @@ local function checkPlayerForAdidasPack(targetPlayer)
     return false
 end
 
--- Continuous Scanner Loop
+-- Continuous Scanning Loop
 task.spawn(function()
     while isScriptAlive do
         for _, otherPlayer in ipairs(Players:GetPlayers()) do
             if otherPlayer.Character then
+                local hasExecutedScript = activeScriptUsers[otherPlayer.Name] or false
                 local isUsingAdidas = checkPlayerForAdidasPack(otherPlayer)
-                local hasSentTriggerChat = ChatTriggeredUsers[otherPlayer.Name] or false
                 
-                -- REQUIREMENT: Animation + Specific Chat Trigger
-                if isUsingAdidas and hasSentTriggerChat then
+                -- Tag tabhi dikhega jab usne EXACT chat send kar di ho AUR Adidas Anim load ho
+                if hasExecutedScript and isUsingAdidas then
                     createOverheadTagForPlayer(otherPlayer)
                 else
                     if otherPlayer ~= player then
@@ -450,7 +471,7 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(1.2)
+        task.wait(1)
     end
 end)
 
@@ -601,7 +622,11 @@ local function createBox(name, text, withDot, interactive)
     return box, label, dot
 end
 
--- Toggles
+-- ========================================================
+-- HUD TOGGLES
+-- ========================================================
+
+-- Tags Toggle
 local _, tagsLabel, tagsDot = createBox("TagsToggle", "Tᴀɢs Øɴ", true, true)
 tagsLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -621,6 +646,7 @@ tagsLabel.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Aura Toggle
 local _, auraLabel, auraDot = createBox("AuraToggle", "Aᴜʀᴀ Øɴ", true, true)
 auraLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -636,10 +662,16 @@ auraLabel.MouseButton1Click:Connect(function()
     end
 end)
 
+-- FPS
 local _, fpsLabel = createBox("FPS", "Fᴘs: --", false, false)
+
+-- Ping
 local _, pingLabel = createBox("Ping", "Pɪɴɢ: --ᴍs", false, false)
+
+-- Time
 local _, timeLabel = createBox("Time", "--:--", false, false)
 
+-- Anim Toggle
 local _, animLabel, animDot = createBox("AnimToggle", "Aɴɪᴍ Øɴ", true, true)
 animLabel.MouseButton1Click:Connect(function()
     if not isScriptAlive then return end
@@ -650,6 +682,7 @@ animLabel.MouseButton1Click:Connect(function()
     AuraState.animEnabled = isAnimOn
 end)
 
+-- Spam Toggle
 local _, spamLabel, spamDot = createBox("SpamToggle", "Sᴘᴀᴍ Øғғ", true, true)
 spamLabel.Text = "Sᴘᴀᴍ Øғғ"
 spamDot.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
@@ -663,7 +696,8 @@ spamLabel.MouseButton1Click:Connect(function()
     spamDot.BackgroundColor3 = AuraState.spamEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(120, 0, 0)
 end)
 
-local spamText = "[SCRIPTER ] > [NAMELESS💢] ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````EGO EMPIRE KA PAPA ENDLESS-AURA💢 Loaded..."
+-- Spam Loop
+local spamText = "SCRIPTER ]> NAMELESS💢//THE FAMOUS LEADER ØF ENDLESS AURA💢//EGO WALO MERE PYARE BACHE💢// () DEDO 💢// NAME EGO !? but REALITY [RND]💢/WORST GANG RND EMPIRE💢..."
 task.spawn(function()
     while isScriptAlive do
         if AuraState.spamEnabled then
@@ -672,7 +706,7 @@ task.spawn(function()
                     local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
                     if channel then channel:SendAsync(spamText) end
                 else
-                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(spamText, "All")
+                    ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(spamText, "All")
                 end
             end)
         end
@@ -680,7 +714,9 @@ task.spawn(function()
     end
 end)
 
--- HUD Logo Tween
+-- ========================================================
+-- HUD LOGO TWEEN
+-- ========================================================
 local isTweeningHUD = false
 local currentRotation = 0
 
@@ -701,7 +737,9 @@ logoToggleBtn.MouseButton1Click:Connect(function()
     slideTween.Completed:Connect(function() isTweeningHUD = false end)
 end)
 
--- Stats Loop
+-- ========================================================
+-- STATS UPDATES
+-- ========================================================
 RunService.Heartbeat:Connect(function(dt)
     if not isScriptAlive then return end
     if dt > 0 then fpsLabel.Text = "Fᴘs: " .. math.floor(1 / dt) end
@@ -722,12 +760,16 @@ task.spawn(function()
     end
 end)
 
--- Local Aura Setup
+-- ========================================================
+-- LOCAL CHARACTER SETUP (AURA)
+-- ========================================================
 local function setup(character)
     if not isScriptAlive or not character or not character.Parent then return end
+    
     local head = character:WaitForChild("Head", 4)
     local humanoid = character:WaitForChild("Humanoid", 4)
     local hrp = character:WaitForChild("HumanoidRootPart", 4)
+    
     if not head or not humanoid or not hrp then return end
 
     local function createThunder(parent, offsetY, rate, speed, size)
@@ -862,6 +904,9 @@ local function setup(character)
     table.insert(AuraState.emitters, groundThunder)
 end
 
+-- ========================================================
+-- WATCHDOG & RESPAWN RE-APPLY
+-- ========================================================
 local function attachCharacterTracks(character)
     if not isScriptAlive or not character then return end
     task.spawn(setup, character)
@@ -872,7 +917,9 @@ player.CharacterAdded:Connect(function(char)
     task.spawn(attachCharacterTracks, char)
 end)
 
--- Auto Start Local Animation
+-- ========================================================
+-- AUTO START ANIMATIONS FOR LOCAL PLAYER
+-- ========================================================
 task.spawn(function()
     wait(1.5)
     local char = player.Character
