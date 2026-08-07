@@ -45,6 +45,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -99,6 +100,22 @@ OpenSavedBtn.Parent = MainFrame
 local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 5)
 OpenCorner.Parent = OpenSavedBtn
+
+-- MAIN MENU TOGGLE BUTTON (Small button to hide/show both menus)
+local MenuToggleBtn = Instance.new("TextButton")
+MenuToggleBtn.Size = UDim2.new(0, 30, 0, 22)
+MenuToggleBtn.Position = UDim2.new(0.94, 0, 0.03, 0)
+MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+MenuToggleBtn.Text = "≡"
+MenuToggleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+MenuToggleBtn.Font = Enum.Font.GothamBold
+MenuToggleBtn.TextSize = 14
+MenuToggleBtn.AutoButtonColor = false
+MenuToggleBtn.Parent = MainFrame
+
+local MenuToggleCorner = Instance.new("UICorner")
+MenuToggleCorner.CornerRadius = UDim.new(0, 5)
+MenuToggleCorner.Parent = MenuToggleBtn
 
 -- Info Display Panel
 local InfoLabel = Instance.new("TextLabel")
@@ -372,6 +389,8 @@ local currentTrack = nil
 local lastLoggedId = ""
 local lastLoggedName = "Custom Emote"
 local isFrozen = false
+local freezeStartTime = 0
+local menuVisible = true -- Track menu visibility
 
 local function playAnimById(id)
     local char = LocalPlayer.Character
@@ -384,6 +403,7 @@ local function playAnimById(id)
         currentTrack = char.Humanoid:LoadAnimation(newAnim)
         currentTrack:Play()
         isFrozen = false
+        freezeStartTime = 0
         FreezeBtn.Text = "Freeze Frame"
         TimerLabel.Text = "Freeze Status: Unfrozen"
         showToast("Playing ID: " .. id)
@@ -462,8 +482,38 @@ renderSavedList = function()
     ScrollList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
 end
 
+-- MENU TOGGLE FUNCTION (Controls both MainFrame and SavedFrame)
+local function toggleMenus()
+    menuVisible = not menuVisible
+    
+    if menuVisible then
+        -- Show both menus
+        MainFrame.Visible = true
+        if SavedFrame.Visible then
+            SavedFrame.Visible = true
+        end
+        MenuToggleBtn.Text = "≡"
+        MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+        showToast("Menus ON")
+    else
+        -- Hide both menus
+        MainFrame.Visible = false
+        SavedFrame.Visible = false
+        MenuToggleBtn.Text = "×"
+        MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        showToast("Menus OFF")
+    end
+end
+
+-- Menu Toggle Button Click
+MenuToggleBtn.MouseButton1Click:Connect(toggleMenus)
+
 -- Open / Close Saved Window Toggle
 OpenSavedBtn.MouseButton1Click:Connect(function()
+    if not menuVisible then
+        showToast("Menu is disabled! Click ≡ to enable.")
+        return
+    end
     SavedFrame.Visible = not SavedFrame.Visible
     if SavedFrame.Visible then
         renderSavedList()
@@ -476,6 +526,11 @@ end)
 
 -- MODIFIED SAVE Action Logic (2 TextBoxes + Save Button)
 SaveBtn.MouseButton1Click:Connect(function()
+    if not menuVisible then
+        showToast("Menu is disabled! Click ≡ to enable.")
+        return
+    end
+    
     local nameValue = SaveNameBox.Text:gsub("^%s*(.-)%s*$", "%1")
     local idValue = SaveIDBox.Text:gsub("^%s*(.-)%s*$", "%1")
     
@@ -509,6 +564,11 @@ end)
 
 -- Compact Logger Toggle Button Logic
 LoggerBtn.MouseButton1Click:Connect(function()
+    if not menuVisible then
+        showToast("Menu is disabled! Click ≡ to enable.")
+        return
+    end
+    
     loggerActive = not loggerActive
     if loggerActive then
         LoggerBtn.Text = "Logger: ON"
@@ -555,6 +615,11 @@ LocalPlayer.CharacterAdded:Connect(setupDetector)
 
 -- Play Button Click
 PlayBtn.MouseButton1Click:Connect(function()
+    if not menuVisible then
+        showToast("Menu is disabled! Click ≡ to enable.")
+        return
+    end
+    
     local id = TextBox.Text:match("%d+")
     if not id then
         showToast("Enter a valid ID!")
@@ -565,19 +630,26 @@ end)
 
 -- Freeze Button Click
 FreezeBtn.MouseButton1Click:Connect(function()
+    if not menuVisible then
+        showToast("Menu is disabled! Click ≡ to enable.")
+        return
+    end
+    
     if not currentTrack or not currentTrack.IsPlaying then
         showToast("Play an animation first!")
         return
     end
 
     if not isFrozen then
-        local frozenTime = math.floor(currentTrack.TimePosition * 100) / 100
+        -- Freeze the animation
         currentTrack:AdjustSpeed(0)
         isFrozen = true
+        freezeStartTime = math.floor(currentTrack.TimePosition * 100) / 100
         FreezeBtn.Text = "Resume Frame"
-        TimerLabel.Text = "Frozen at: " .. tostring(frozenTime) .. "s / " .. math.floor(currentTrack.Length * 100) / 100 .. "s"
-        showToast("Frozen at " .. tostring(frozenTime) .. "s")
+        TimerLabel.Text = "Frozen at: " .. tostring(freezeStartTime) .. "s / " .. math.floor(currentTrack.Length * 100) / 100 .. "s"
+        showToast("Frozen at " .. tostring(freezeStartTime) .. "s")
     else
+        -- Resume the animation
         currentTrack:AdjustSpeed(1)
         isFrozen = false
         FreezeBtn.Text = "Freeze Frame"
@@ -588,10 +660,16 @@ end)
 
 -- Stop Button Click
 StopBtn.MouseButton1Click:Connect(function()
+    if not menuVisible then
+        showToast("Menu is disabled! Click ≡ to enable.")
+        return
+    end
+    
     if currentTrack then
         currentTrack:Stop()
         currentTrack = nil
         isFrozen = false
+        freezeStartTime = 0
         FreezeBtn.Text = "Freeze Frame"
         TimerLabel.Text = "Freeze Status: Unfrozen"
         showToast("Stopped Animation")
@@ -599,3 +677,4 @@ StopBtn.MouseButton1Click:Connect(function()
 end)
 
 print("Animation Suite loaded successfully!")
+print("Click '≡' button to toggle all menus ON/OFF")
