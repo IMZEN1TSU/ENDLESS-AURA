@@ -70,6 +70,30 @@ screenGui.Name = "KanekiHubGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = game.CoreGui or playerGui
 
+---------------------------------------------------------
+-- FLOATING MINI TOGGLE BUTTON ("KH")
+---------------------------------------------------------
+local khMiniButton = Instance.new("TextButton")
+khMiniButton.Name = "KHMiniButton"
+khMiniButton.Size = UDim2.new(0, 35, 0, 35)
+khMiniButton.Position = UDim2.new(0.05, 0, 0.4, 0)
+khMiniButton.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
+khMiniButton.BorderSizePixel = 1
+khMiniButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+khMiniButton.Text = "KH"
+khMiniButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+khMiniButton.TextSize = 14
+khMiniButton.Font = Enum.Font.SourceSansBold
+khMiniButton.Active = true
+khMiniButton.Parent = screenGui
+
+local khMiniCorner = Instance.new("UICorner")
+khMiniCorner.CornerRadius = UDim.new(0, 8)
+khMiniCorner.Parent = khMiniButton
+
+---------------------------------------------------------
+-- MAIN FRAME SETUP
+---------------------------------------------------------
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 210, 0, 320)
@@ -421,6 +445,116 @@ voidProtectionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
 voidProtectionBtn.TextSize = 11
 voidProtectionBtn.Font = Enum.Font.SourceSans
 voidProtectionBtn.Parent = fixedBottomFrame
+
+---------------------------------------------------------
+-- COMMANDS LIST LISTENER UI FRAME (;cmd / cmd)
+---------------------------------------------------------
+local cmdFrame = Instance.new("Frame")
+cmdFrame.Name = "CmdListFrame"
+cmdFrame.Size = UDim2.new(0, 220, 0, 260)
+cmdFrame.Position = UDim2.new(0.5, 120, 0.5, -130)
+cmdFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+cmdFrame.BackgroundTransparency = 0.1
+cmdFrame.BorderSizePixel = 1
+cmdFrame.BorderColor3 = Color3.fromRGB(180, 0, 100)
+cmdFrame.Visible = false
+cmdFrame.Active = true
+cmdFrame.Parent = screenGui
+
+local cmdCorner = Instance.new("UICorner")
+cmdCorner.CornerRadius = UDim.new(0, 6)
+cmdCorner.Parent = cmdFrame
+
+local cmdHeader = Instance.new("Frame")
+cmdHeader.Size = UDim2.new(1, 0, 0, 30)
+cmdHeader.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
+cmdHeader.BorderSizePixel = 0
+cmdHeader.Parent = cmdFrame
+
+local cmdHeaderCorner = Instance.new("UICorner")
+cmdHeaderCorner.CornerRadius = UDim.new(0, 6)
+cmdHeaderCorner.Parent = cmdHeader
+
+local cmdTitle = Instance.new("TextLabel")
+cmdTitle.Size = UDim2.new(1, -30, 1, 0)
+cmdTitle.Position = UDim2.new(0, 10, 0, 0)
+cmdTitle.BackgroundTransparency = 1
+cmdTitle.Text = "KANEKI COMMANDS"
+cmdTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+cmdTitle.TextSize = 12
+cmdTitle.Font = Enum.Font.SourceSansBold
+cmdTitle.TextXAlignment = Enum.TextXAlignment.Left
+cmdTitle.Parent = cmdHeader
+
+local cmdCloseBtn = Instance.new("TextButton")
+cmdCloseBtn.Size = UDim2.new(0, 25, 0, 25)
+cmdCloseBtn.Position = UDim2.new(1, -28, 0, 2.5)
+cmdCloseBtn.BackgroundTransparency = 1
+cmdCloseBtn.Text = "X"
+cmdCloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+cmdCloseBtn.TextSize = 14
+cmdCloseBtn.Font = Enum.Font.SourceSansBold
+cmdCloseBtn.Parent = cmdHeader
+
+cmdCloseBtn.MouseButton1Click:Connect(function()
+    playTapSound()
+    cmdFrame.Visible = false
+end)
+
+local cmdScroll = Instance.new("ScrollingFrame")
+cmdScroll.Size = UDim2.new(1, -10, 1, -40)
+cmdScroll.Position = UDim2.new(0, 5, 0, 35)
+cmdScroll.BackgroundTransparency = 1
+cmdScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+cmdScroll.ScrollBarThickness = 4
+cmdScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 0, 120)
+cmdScroll.Parent = cmdFrame
+
+local cmdLayout = Instance.new("UIListLayout")
+cmdLayout.Parent = cmdScroll
+cmdLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cmdLayout.Padding = UDim.new(0, 4)
+
+local commandListData = {
+    {"bring / unbring", "Target ko bring karna / stop"},
+    {"bringv2 / unbringv2", "Target bring V2 mode"},
+    {"bang / unbang", "Bang animation target par"},
+    {"facebang / unfacebang", "FaceBang target par"},
+    {"boobs / unboobs", "Boobs emote target par"},
+    {"as / unas", "AS emote attach"},
+    {"suck / unsuck", "Suck animation attach"},
+    {"fingering / unfingering", "Fingering attach"},
+    {"slap / unslap", "Slap emote target par"},
+    {"spam on / spam off", "Custom chat spammer"},
+    {"esp on / esp off", "Target highlight purple glow"},
+    {"copychat on / copychat off", "Target ka chat copy karna"},
+    {"copyanim on / copyanim off", "Target animations copy"},
+    {"view / unview", "Target ko view/unview karna"},
+    {"tp / purpletp", "Purple particle TP"},
+    {"cmd / cmds", "Commands list panel kholna"}
+}
+
+local totalCmdHeight = 0
+for _, data in ipairs(commandListData) do
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -5, 0, 22)
+    lbl.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+    lbl.BorderSizePixel = 1
+    lbl.BorderColor3 = Color3.fromRGB(100, 0, 60)
+    lbl.Text = "  " .. data[1] .. " - " .. data[2]
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+    lbl.TextSize = 10
+    lbl.Font = Enum.Font.SourceSans
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = cmdScroll
+    
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 4)
+    c.Parent = lbl
+    
+    totalCmdHeight = totalCmdHeight + 26
+end
+cmdScroll.CanvasSize = UDim2.new(0, 0, 0, totalCmdHeight)
 
 ---------------------------------------------------------
 -- TARGET PLAYER FINDER LOGIC
@@ -995,6 +1129,30 @@ local function stopSpamProcess()
     StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 end
 
+local function generatePatternString(patternUnit, maxLen)
+    local result = ""
+    local unitLen = string.len(patternUnit)
+    if unitLen == 0 then return "" end
+    while (string.len(result) + unitLen) <= maxLen do
+        result = result .. patternUnit
+    end
+    return result
+end
+
+local function buildSpamString(sender, target, rawWord, patternUnit)
+    local prefix = "SCRIPT BY " .. sender .. " > "
+    local suffix = " [ " .. target .. " ] TMX MI " .. rawWord
+    local staticLength = string.len(prefix) + string.len(suffix)
+    local maxAllowedPatternLength = 195 - staticLength
+    
+    if maxAllowedPatternLength < 0 then
+        return string.sub(prefix .. suffix, 1, 195)
+    end
+    
+    local dynamicPattern = generatePatternString(patternUnit, maxAllowedPatternLength)
+    return string.sub(prefix .. dynamicPattern .. suffix, 1, 195)
+end
+
 local function toggleSpam(state)
     if state == nil then
         isSpamming = not isSpamming
@@ -1025,30 +1183,6 @@ local function toggleSpam(state)
     else
         stopSpamProcess()
     end
-end
-
-local function generatePatternString(patternUnit, maxLen)
-    local result = ""
-    local unitLen = string.len(patternUnit)
-    if unitLen == 0 then return "" end
-    while (string.len(result) + unitLen) <= maxLen do
-        result = result .. patternUnit
-    end
-    return result
-end
-
-local function buildSpamString(sender, target, rawWord, patternUnit)
-    local prefix = "SCRIPT BY " .. sender .. " > "
-    local suffix = " [ " .. target .. " ] TMX MI " .. rawWord
-    local staticLength = string.len(prefix) + string.len(suffix)
-    local maxAllowedPatternLength = 195 - staticLength
-    
-    if maxAllowedPatternLength < 0 then
-        return string.sub(prefix .. suffix, 1, 195)
-    end
-    
-    local dynamicPattern = generatePatternString(patternUnit, maxAllowedPatternLength)
-    return string.sub(prefix .. dynamicPattern .. suffix, 1, 195)
 end
 
 StartBtn.MouseButton1Click:Connect(function()
@@ -1328,6 +1462,7 @@ local function stopAttachment()
         savedReturnCFrame = nil
     end
 
+    -- Reset UI Buttons Appearance
     if currentMode == "AS" then
         sideButton.Text = "AS"
         sideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1340,6 +1475,30 @@ local function stopAttachment()
         slapButton.Text = "Slap"
         slapButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         slapButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "Bang" then
+        bangButton.Text = "Bang"
+        bangButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        bangButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "FaceBang" then
+        faceBangButton.Text = "Face Bang"
+        faceBangButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        faceBangButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "BOOBS" then
+        pressButton.Text = "BOOBS"
+        pressButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        pressButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "Suck" then
+        suckButton.Text = "Suck"
+        suckButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        suckButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "Bring" then
+        bringButton.Text = "Bring"
+        bringButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        bringButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "BringV2" then
+        bringV2Button.Text = "Bring V2"
+        bringV2Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        bringV2Button.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
     end
 
     currentMode = nil
@@ -1384,16 +1543,12 @@ local function toggleSpammerUI(state)
     updateButtonAppearance()
 end
 
-csSpammerToggleBtn.MouseButton1Click:Connect(function()
-    if not isOpen then return end
-    playTapSound()
-    toggleSpammerUI()
-end)
-
-toggleButton.MouseButton1Click:Connect(function()
-    isOpen = not isOpen
+local function toggleMainUI(state)
+    if state == nil then isOpen = not isOpen else isOpen = state end
+    
     if isOpen then
         playMenuOpenSound()
+        mainFrame.Visible = true
         contentFrame.Visible = true
         fixedBottomFrame.Visible = true
         mainFrame:TweenSize(UDim2.new(0, 210, 0, 320), Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.2, true)
@@ -1406,6 +1561,7 @@ toggleButton.MouseButton1Click:Connect(function()
         end
         mainFrame:TweenSize(UDim2.new(0, 210, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.2, true, function()
             if not isOpen then 
+                mainFrame.Visible = false
                 contentFrame.Visible = false 
                 fixedBottomFrame.Visible = false
             end
@@ -1413,6 +1569,20 @@ toggleButton.MouseButton1Click:Connect(function()
         toggleButton.Text = "Kᴀɴᴇᴋɪ HᴜB  ▼"
     end
     updateButtonAppearance()
+end
+
+khMiniButton.MouseButton1Click:Connect(function()
+    toggleMainUI()
+end)
+
+csSpammerToggleBtn.MouseButton1Click:Connect(function()
+    if not isOpen then return end
+    playTapSound()
+    toggleSpammerUI()
+end)
+
+toggleButton.MouseButton1Click:Connect(function()
+    toggleMainUI()
 end)
 
 local function updatePlayerList()
@@ -1476,6 +1646,8 @@ local function enableDragging(frame, dragHandle)
 end
 
 enableDragging(mainFrame, headerFrame)
+enableDragging(khMiniButton, khMiniButton)
+enableDragging(cmdFrame, cmdHeader)
 
 ---------------------------------------------------------
 -- ATTACHMENT EXECUTION
@@ -1708,10 +1880,16 @@ bangButton.MouseButton1Click:Connect(function()
     playTapSound()
     local target = getTargetPlayer()
     if not target then stopAttachment() return end
-    if currentMode == "Bang" and activeTarget == target then stopAttachment() return end
+    if currentMode == "Bang" and activeTarget == target then 
+        stopAttachment() 
+        return 
+    end
 
     currentMode = "Bang"
     activeTarget = target
+    bangButton.Text = "UnBang"
+    bangButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    bangButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
     applyAttachmentLogic()
 end)
 
@@ -1719,10 +1897,16 @@ faceBangButton.MouseButton1Click:Connect(function()
     playTapSound()
     local target = getTargetPlayer()
     if not target then stopAttachment() return end
-    if currentMode == "FaceBang" and activeTarget == target then stopAttachment() return end
+    if currentMode == "FaceBang" and activeTarget == target then 
+        stopAttachment() 
+        return 
+    end
 
     currentMode = "FaceBang"
     activeTarget = target
+    faceBangButton.Text = "UnFaceBang"
+    faceBangButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    faceBangButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
     applyAttachmentLogic()
 end)
 
@@ -1730,10 +1914,16 @@ pressButton.MouseButton1Click:Connect(function()
     playTapSound()
     local target = getTargetPlayer()
     if not target then stopAttachment() return end
-    if currentMode == "BOOBS" and activeTarget == target then stopAttachment() return end
+    if currentMode == "BOOBS" and activeTarget == target then 
+        stopAttachment() 
+        return 
+    end
 
     currentMode = "BOOBS"
     activeTarget = target
+    pressButton.Text = "UnBoobs"
+    pressButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    pressButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
     applyAttachmentLogic()
 end)
 
@@ -1741,10 +1931,16 @@ suckButton.MouseButton1Click:Connect(function()
     playTapSound()
     local target = getTargetPlayer()
     if not target then stopAttachment() return end
-    if currentMode == "Suck" and activeTarget == target then stopAttachment() return end
+    if currentMode == "Suck" and activeTarget == target then 
+        stopAttachment() 
+        return 
+    end
 
     currentMode = "Suck"
     activeTarget = target
+    suckButton.Text = "UnSuck"
+    suckButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    suckButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
     applyAttachmentLogic()
 end)
 
@@ -1786,10 +1982,16 @@ bringButton.MouseButton1Click:Connect(function()
     playTapSound()
     local target = getTargetPlayer()
     if not target then stopAttachment() return end
-    if currentMode == "Bring" and activeTarget == target then stopAttachment() return end
+    if currentMode == "Bring" and activeTarget == target then 
+        stopAttachment() 
+        return 
+    end
 
     currentMode = "Bring"
     activeTarget = target
+    bringButton.Text = "UnBring"
+    bringButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    bringButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
     applyAttachmentLogic()
 end)
 
@@ -1797,25 +1999,40 @@ bringV2Button.MouseButton1Click:Connect(function()
     playTapSound()
     local target = getTargetPlayer()
     if not target then stopAttachment() return end
-    if currentMode == "BringV2" and activeTarget == target then stopAttachment() return end
+    if currentMode == "BringV2" and activeTarget == target then 
+        stopAttachment() 
+        return 
+    end
 
     currentMode = "BringV2"
     activeTarget = target
+    bringV2Button.Text = "UnBringV2"
+    bringV2Button.TextColor3 = Color3.fromRGB(255, 120, 180)
+    bringV2Button.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
     applyAttachmentLogic()
 end)
 
 ---------------------------------------------------------
--- CHAT COMMAND LISTENER LOGIC
+-- CHAT COMMAND LISTENER LOGIC (IY STYLE + UI SYNC)
 ---------------------------------------------------------
 local function processChatCommand(msgText)
     local text = string.lower(msgText)
+    text = string.gsub(text, "^[;/!]", "") -- Optional prefix removal (e.g., ;cmd or cmd)
     local target = getTargetPlayer()
 
+    -- Commands List Window
+    if text == "cmd" or text == "cmds" or text == "commands" then
+        playTapSound()
+        cmdFrame.Visible = not cmdFrame.Visible
+
     -- Bring
-    if text == "bring" then
+    elseif text == "bring" then
         if target then
             currentMode = "Bring"
             activeTarget = target
+            bringButton.Text = "UnBring"
+            bringButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            bringButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
             applyAttachmentLogic()
         end
     elseif text == "bring off" or text == "unbring" then
@@ -1826,6 +2043,9 @@ local function processChatCommand(msgText)
         if target then
             currentMode = "BringV2"
             activeTarget = target
+            bringV2Button.Text = "UnBringV2"
+            bringV2Button.TextColor3 = Color3.fromRGB(255, 120, 180)
+            bringV2Button.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
             applyAttachmentLogic()
         end
     elseif text == "bringv2 off" or text == "unbringv2" or text == "bring v2 off" then
@@ -1836,6 +2056,9 @@ local function processChatCommand(msgText)
         if target then
             currentMode = "Bang"
             activeTarget = target
+            bangButton.Text = "UnBang"
+            bangButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            bangButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
             applyAttachmentLogic()
         end
     elseif text == "bang off" or text == "unbang" then
@@ -1846,6 +2069,9 @@ local function processChatCommand(msgText)
         if target then
             currentMode = "FaceBang"
             activeTarget = target
+            faceBangButton.Text = "UnFaceBang"
+            faceBangButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            faceBangButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
             applyAttachmentLogic()
         end
     elseif text == "facebang off" or text == "unfacebang" or text == "face bang off" then
@@ -1856,6 +2082,9 @@ local function processChatCommand(msgText)
         if target then
             currentMode = "BOOBS"
             activeTarget = target
+            pressButton.Text = "UnBoobs"
+            pressButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            pressButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
             applyAttachmentLogic()
         end
     elseif text == "boobs off" or text == "unboobs" then
@@ -1879,6 +2108,9 @@ local function processChatCommand(msgText)
         if target then
             currentMode = "Suck"
             activeTarget = target
+            suckButton.Text = "UnSuck"
+            suckButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            suckButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
             applyAttachmentLogic()
         end
     elseif text == "suck off" or text == "unsuck" then
