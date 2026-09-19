@@ -1,0 +1,1995 @@
+-- LocalScript placed inside StarterPlayerScripts or StarterGui
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local camera = Workspace.CurrentCamera
+
+---------------------------------------------------------
+-- CHAT SYSTEM FUNCTION
+---------------------------------------------------------
+local function executeChat(msg)
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local targetChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if targetChannel then 
+            targetChannel:SendAsync(msg) 
+        end
+    else
+        local chatEvent = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+        if chatEvent then 
+            chatEvent:FireServer(msg, "All") 
+        end
+    end
+end
+
+---------------------------------------------------------
+-- COPY CHAT MONITORING SYSTEM
+---------------------------------------------------------
+local chatSyncActive = false
+local chatTargetPlayer = nil
+
+TextChatService.MessageReceived:Connect(function(msg)
+    if chatSyncActive and chatTargetPlayer and msg.TextSource and msg.TextSource.UserId == chatTargetPlayer.UserId then
+        executeChat(msg.Text)
+    end
+end)
+
+-- Audio Setups
+local function playTapSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://107406973902030"
+    sound.Volume = 2.5
+    sound.PlaybackSpeed = 1
+    sound.Parent = SoundService
+    sound:Play()
+    game:GetService("Debris"):AddItem(sound, 2)
+end
+
+local function playMenuOpenSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://5156930551"
+    sound.Volume = 2.0
+    sound.PlaybackSpeed = 1
+    sound.Parent = SoundService
+    sound:Play()
+    game:GetService("Debris"):AddItem(sound, 2)
+end
+
+---------------------------------------------------------
+-- MAIN CONTAINER & SCREEN GUI SETUP
+---------------------------------------------------------
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "KanekiHubGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = game.CoreGui or playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 210, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -105, 0.5, -160)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 1
+mainFrame.BorderColor3 = Color3.fromRGB(180, 0, 100)
+mainFrame.ClipsDescendants = false
+mainFrame.Active = true
+mainFrame.Parent = screenGui
+
+local mainFrameCorner = Instance.new("UICorner")
+mainFrameCorner.CornerRadius = UDim.new(0, 6)
+mainFrameCorner.Parent = mainFrame
+
+local headerFrame = Instance.new("Frame")
+headerFrame.Size = UDim2.new(1, 0, 0, 35)
+headerFrame.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
+headerFrame.BackgroundTransparency = 0.05
+headerFrame.BorderSizePixel = 0
+headerFrame.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 6)
+headerCorner.Parent = headerFrame
+
+local logoImage = Instance.new("ImageLabel")
+logoImage.Size = UDim2.new(0, 25, 0, 25)
+logoImage.Position = UDim2.new(0, 5, 0.5, -12.5)
+logoImage.BackgroundTransparency = 1
+logoImage.Image = "rbxassetid://126933281091832"
+logoImage.BorderSizePixel = 0
+logoImage.Parent = headerFrame
+
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(0, 5)
+logoCorner.Parent = logoImage
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(1, -65, 1, 0)
+toggleButton.Position = UDim2.new(0, 33, 0, 0)
+toggleButton.BackgroundTransparency = 1
+toggleButton.Text = "Kᴀɴᴇᴋɪ HᴜB  ▲"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = 13
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextXAlignment = Enum.TextXAlignment.Left
+toggleButton.Parent = headerFrame
+
+local csSpammerToggleBtn = Instance.new("TextButton")
+csSpammerToggleBtn.Size = UDim2.new(0, 30, 1, 0)
+csSpammerToggleBtn.Position = UDim2.new(1, -30, 0, 0)
+csSpammerToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 80)
+csSpammerToggleBtn.BorderSizePixel = 0
+csSpammerToggleBtn.Text = ">"
+csSpammerToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+csSpammerToggleBtn.TextSize = 14
+csSpammerToggleBtn.Font = Enum.Font.SourceSansBold
+csSpammerToggleBtn.Parent = headerFrame
+
+local csBtnCorner = Instance.new("UICorner")
+csBtnCorner.CornerRadius = UDim.new(0, 4)
+csBtnCorner.Parent = csSpammerToggleBtn
+
+---------------------------------------------------------
+-- SCROLLABLE TROLL CONTENT FRAME
+---------------------------------------------------------
+local contentFrame = Instance.new("ScrollingFrame")
+contentFrame.Size = UDim2.new(1, 0, 1, -80)
+contentFrame.Position = UDim2.new(0, 0, 0, 35)
+contentFrame.BackgroundTransparency = 1
+contentFrame.ClipsDescendants = true
+contentFrame.CanvasSize = UDim2.new(0, 0, 0, 340)
+contentFrame.ScrollBarThickness = 4
+contentFrame.ScrollBarImageColor3 = Color3.fromRGB(200, 0, 120)
+contentFrame.Parent = mainFrame
+
+local textBox = Instance.new("TextBox")
+textBox.Size = UDim2.new(0, 190, 0, 28)
+textBox.Position = UDim2.new(0, 10, 0, 10)
+textBox.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+textBox.BackgroundTransparency = 0.2
+textBox.BorderSizePixel = 1
+textBox.BorderColor3 = Color3.fromRGB(180, 0, 100)
+textBox.Text = ""
+textBox.PlaceholderText = "Select Player..."
+textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textBox.PlaceholderColor3 = Color3.fromRGB(200, 150, 200)
+textBox.TextSize = 12
+textBox.Font = Enum.Font.SourceSans
+textBox.ClearTextOnFocus = false
+textBox.Parent = contentFrame
+
+local dropdownFrame = Instance.new("ScrollingFrame")
+dropdownFrame.Size = UDim2.new(0, 190, 0, 90)
+dropdownFrame.Position = UDim2.new(0, 10, 0, 40)
+dropdownFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+dropdownFrame.BackgroundTransparency = 0.1
+dropdownFrame.BorderSizePixel = 1
+dropdownFrame.BorderColor3 = Color3.fromRGB(180, 0, 100)
+dropdownFrame.Visible = false
+dropdownFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+dropdownFrame.ScrollBarThickness = 4
+dropdownFrame.ScrollBarImageColor3 = Color3.fromRGB(200, 0, 120)
+dropdownFrame.ZIndex = 10
+dropdownFrame.Parent = contentFrame
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.Parent = dropdownFrame
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Purple TP Button
+local purpleTpButton = Instance.new("TextButton")
+purpleTpButton.Size = UDim2.new(0, 190, 0, 28)
+purpleTpButton.Position = UDim2.new(0, 10, 0, 44)
+purpleTpButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+purpleTpButton.BackgroundTransparency = 0.2
+purpleTpButton.BorderSizePixel = 1
+purpleTpButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+purpleTpButton.Text = "Purple TP"
+purpleTpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+purpleTpButton.TextSize = 12
+purpleTpButton.Font = Enum.Font.SourceSansBold
+purpleTpButton.Parent = contentFrame
+
+-- View Target & Target ESP
+local viewButton = Instance.new("TextButton")
+viewButton.Size = UDim2.new(0, 90, 0, 28)
+viewButton.Position = UDim2.new(0, 10, 0, 78)
+viewButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+viewButton.BackgroundTransparency = 0.2
+viewButton.BorderSizePixel = 1
+viewButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+viewButton.Text = "View Target"
+viewButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+viewButton.TextSize = 11
+viewButton.Font = Enum.Font.SourceSansBold
+viewButton.Parent = contentFrame
+
+local targetEspButton = Instance.new("TextButton")
+targetEspButton.Size = UDim2.new(0, 90, 0, 28)
+targetEspButton.Position = UDim2.new(0, 110, 0, 78)
+targetEspButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+targetEspButton.BackgroundTransparency = 0.2
+targetEspButton.BorderSizePixel = 1
+targetEspButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+targetEspButton.Text = "Target ESP: OFF"
+targetEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+targetEspButton.TextSize = 11
+targetEspButton.Font = Enum.Font.SourceSansBold
+targetEspButton.Parent = contentFrame
+
+-- Copy Anim & Copy Chat
+local copyAnimButton = Instance.new("TextButton")
+copyAnimButton.Size = UDim2.new(0, 90, 0, 28)
+copyAnimButton.Position = UDim2.new(0, 10, 0, 112)
+copyAnimButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+copyAnimButton.BackgroundTransparency = 0.2
+copyAnimButton.BorderSizePixel = 1
+copyAnimButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+copyAnimButton.Text = "Copy Anim: OFF"
+copyAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyAnimButton.TextSize = 11
+copyAnimButton.Font = Enum.Font.SourceSansBold
+copyAnimButton.Parent = contentFrame
+
+local copyChatButton = Instance.new("TextButton")
+copyChatButton.Size = UDim2.new(0, 90, 0, 28)
+copyChatButton.Position = UDim2.new(0, 110, 0, 112)
+copyChatButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+copyChatButton.BackgroundTransparency = 0.2
+copyChatButton.BorderSizePixel = 1
+copyChatButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+copyChatButton.Text = "Copy Chat: OFF"
+copyChatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyChatButton.TextSize = 11
+copyChatButton.Font = Enum.Font.SourceSansBold
+copyChatButton.Parent = contentFrame
+
+-- Face Bang & Bang
+local faceBangButton = Instance.new("TextButton")
+faceBangButton.Size = UDim2.new(0, 90, 0, 28)
+faceBangButton.Position = UDim2.new(0, 10, 0, 146)
+faceBangButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+faceBangButton.BackgroundTransparency = 0.2
+faceBangButton.BorderSizePixel = 1
+faceBangButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+faceBangButton.Text = "Face Bang"
+faceBangButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+faceBangButton.TextSize = 12
+faceBangButton.Font = Enum.Font.SourceSansBold
+faceBangButton.Parent = contentFrame
+
+local bangButton = Instance.new("TextButton")
+bangButton.Size = UDim2.new(0, 90, 0, 28)
+bangButton.Position = UDim2.new(0, 110, 0, 146)
+bangButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+bangButton.BackgroundTransparency = 0.2
+bangButton.BorderSizePixel = 1
+bangButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+bangButton.Text = "Bang"
+bangButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+bangButton.TextSize = 12
+bangButton.Font = Enum.Font.SourceSansBold
+bangButton.Parent = contentFrame
+
+-- BOOBS & AS
+local pressButton = Instance.new("TextButton")
+pressButton.Size = UDim2.new(0, 90, 0, 28)
+pressButton.Position = UDim2.new(0, 10, 0, 180)
+pressButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+pressButton.BackgroundTransparency = 0.2
+pressButton.BorderSizePixel = 1
+pressButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+pressButton.Text = "BOOBS"
+pressButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+pressButton.TextSize = 12
+pressButton.Font = Enum.Font.SourceSansBold
+pressButton.Parent = contentFrame
+
+local sideButton = Instance.new("TextButton")
+sideButton.Size = UDim2.new(0, 90, 0, 28)
+sideButton.Position = UDim2.new(0, 110, 0, 180)
+sideButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+sideButton.BackgroundTransparency = 0.2
+sideButton.BorderSizePixel = 1
+sideButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+sideButton.Text = "AS"
+sideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+sideButton.TextSize = 12
+sideButton.Font = Enum.Font.SourceSansBold
+sideButton.Parent = contentFrame
+
+-- Suck & Fingering
+local suckButton = Instance.new("TextButton")
+suckButton.Size = UDim2.new(0, 90, 0, 28)
+suckButton.Position = UDim2.new(0, 10, 0, 214)
+suckButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+suckButton.BackgroundTransparency = 0.2
+suckButton.BorderSizePixel = 1
+suckButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+suckButton.Text = "Suck"
+suckButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+suckButton.TextSize = 12
+suckButton.Font = Enum.Font.SourceSansBold
+suckButton.Parent = contentFrame
+
+local fingeringButton = Instance.new("TextButton")
+fingeringButton.Size = UDim2.new(0, 90, 0, 28)
+fingeringButton.Position = UDim2.new(0, 110, 0, 214)
+fingeringButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+fingeringButton.BackgroundTransparency = 0.2
+fingeringButton.BorderSizePixel = 1
+fingeringButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+fingeringButton.Text = "Fingering"
+fingeringButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+fingeringButton.TextSize = 12
+fingeringButton.Font = Enum.Font.SourceSansBold
+fingeringButton.Parent = contentFrame
+
+-- Slap Button
+local slapButton = Instance.new("TextButton")
+slapButton.Size = UDim2.new(0, 190, 0, 28)
+slapButton.Position = UDim2.new(0, 10, 0, 248)
+slapButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+slapButton.BackgroundTransparency = 0.2
+slapButton.BorderSizePixel = 1
+slapButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+slapButton.Text = "Slap"
+slapButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+slapButton.TextSize = 12
+slapButton.Font = Enum.Font.SourceSansBold
+slapButton.Parent = contentFrame
+
+-- Bring V2 & Bring
+local bringV2Button = Instance.new("TextButton")
+bringV2Button.Size = UDim2.new(0, 90, 0, 28)
+bringV2Button.Position = UDim2.new(0, 10, 0, 282)
+bringV2Button.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+bringV2Button.BackgroundTransparency = 0.2
+bringV2Button.BorderSizePixel = 1
+bringV2Button.BorderColor3 = Color3.fromRGB(180, 0, 100)
+bringV2Button.Text = "Bring V2"
+bringV2Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+bringV2Button.TextSize = 12
+bringV2Button.Font = Enum.Font.SourceSansBold
+bringV2Button.Parent = contentFrame
+
+local bringButton = Instance.new("TextButton")
+bringButton.Size = UDim2.new(0, 90, 0, 28)
+bringButton.Position = UDim2.new(0, 110, 0, 282)
+bringButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+bringButton.BackgroundTransparency = 0.2
+bringButton.BorderSizePixel = 1
+bringButton.BorderColor3 = Color3.fromRGB(180, 0, 100)
+bringButton.Text = "Bring"
+bringButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+bringButton.TextSize = 12
+bringButton.Font = Enum.Font.SourceSansBold
+bringButton.Parent = contentFrame
+
+-- Muthi Button
+local muthiBtn = Instance.new("TextButton")
+muthiBtn.Size = UDim2.new(0, 190, 0, 28)
+muthiBtn.Position = UDim2.new(0, 10, 0, 316)
+muthiBtn.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+muthiBtn.BackgroundTransparency = 0.2
+muthiBtn.BorderSizePixel = 1
+muthiBtn.BorderColor3 = Color3.fromRGB(180, 0, 100)
+muthiBtn.Text = "Muthi: OFF"
+muthiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+muthiBtn.TextSize = 11
+muthiBtn.Font = Enum.Font.SourceSansBold
+muthiBtn.Parent = contentFrame
+
+---------------------------------------------------------
+-- FIXED BOTTOM CONTAINER
+---------------------------------------------------------
+local fixedBottomFrame = Instance.new("Frame")
+fixedBottomFrame.Name = "FixedBottomFrame"
+fixedBottomFrame.Size = UDim2.new(1, 0, 0, 38)
+fixedBottomFrame.Position = UDim2.new(0, 0, 1, -38)
+fixedBottomFrame.BackgroundTransparency = 1
+fixedBottomFrame.Parent = mainFrame
+
+local antiSitBtn = Instance.new("TextButton")
+antiSitBtn.Size = UDim2.new(0, 90, 0, 28)
+antiSitBtn.Position = UDim2.new(0, 10, 0, 5)
+antiSitBtn.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+antiSitBtn.BackgroundTransparency = 0.2
+antiSitBtn.BorderSizePixel = 1
+antiSitBtn.BorderColor3 = Color3.fromRGB(180, 0, 100)
+antiSitBtn.Text = "Anti Sit: OFF"
+antiSitBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+antiSitBtn.TextSize = 11
+antiSitBtn.Font = Enum.Font.SourceSans
+antiSitBtn.Parent = fixedBottomFrame
+
+local voidProtectionBtn = Instance.new("TextButton")
+voidProtectionBtn.Size = UDim2.new(0, 90, 0, 28)
+voidProtectionBtn.Position = UDim2.new(0, 110, 0, 5)
+voidProtectionBtn.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+voidProtectionBtn.BackgroundTransparency = 0.2
+voidProtectionBtn.BorderSizePixel = 1
+voidProtectionBtn.BorderColor3 = Color3.fromRGB(180, 0, 100)
+voidProtectionBtn.Text = "Anti Void: OFF"
+voidProtectionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+voidProtectionBtn.TextSize = 11
+voidProtectionBtn.Font = Enum.Font.SourceSans
+voidProtectionBtn.Parent = fixedBottomFrame
+
+---------------------------------------------------------
+-- TARGET PLAYER FINDER LOGIC
+---------------------------------------------------------
+local function getTargetPlayer()
+    local targetName = textBox.Text
+    if targetName == "" then return nil end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and (p.Name:lower():find(targetName:lower()) or p.DisplayName:lower():find(targetName:lower())) then
+            return p
+        end
+    end
+    return nil
+end
+
+local function notify(title, text)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title or "KANEKI HUB",
+            Text = text or "",
+            Duration = 2
+        })
+    end)
+end
+
+---------------------------------------------------------
+-- TARGET ESP LOGIC
+---------------------------------------------------------
+local targetESPActive = false
+
+local function toggleTargetESP(state)
+    targetESPActive = state
+    task.spawn(function()
+        local currentHighlight = nil
+        
+        local function cleanup()
+            if currentHighlight then 
+                currentHighlight:Destroy() 
+                currentHighlight = nil 
+            end
+        end
+        
+        while targetESPActive do
+            local t = getTargetPlayer()
+            if t and t.Character then
+                if not currentHighlight or currentHighlight.Parent ~= t.Character then
+                    cleanup()
+                    
+                    currentHighlight = Instance.new("Highlight")
+                    currentHighlight.Name = "PurpleGlowESP"
+                    currentHighlight.FillColor = Color3.fromRGB(180, 50, 255) 
+                    currentHighlight.FillTransparency = 0.5 
+                    currentHighlight.OutlineColor = Color3.fromRGB(70, 0, 130) 
+                    currentHighlight.OutlineTransparency = 0
+                    currentHighlight.Parent = t.Character
+                end
+            else
+                cleanup()
+            end
+            task.wait(0.01)
+        end
+        cleanup()
+    end)
+end
+
+targetEspButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    if not targetESPActive then
+        local t = getTargetPlayer()
+        if not t then
+            notify("ERROR", "Target Name Likho Pehle!")
+            return
+        end
+        
+        toggleTargetESP(true)
+        
+        targetEspButton.Text = "Target ESP: ON"
+        targetEspButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+        targetEspButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        notify("TARGET ESP", "ESP Enabled for: " .. t.Name)
+    else
+        toggleTargetESP(false)
+        
+        targetEspButton.Text = "Target ESP: OFF"
+        targetEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        targetEspButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    end
+end)
+
+---------------------------------------------------------
+-- COPY CHAT TOGGLE ACTION
+---------------------------------------------------------
+copyChatButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    if not chatSyncActive then
+        local t = getTargetPlayer()
+        if not t then
+            notify("ERROR", "Target Name Likho Pehle!")
+            return
+        end
+        chatTargetPlayer = t
+        chatSyncActive = true
+        copyChatButton.Text = "Copy Chat: ON"
+        copyChatButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+        copyChatButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        notify("COPY CHAT", "Now copying chat of: " .. t.Name)
+    else
+        chatSyncActive = false
+        chatTargetPlayer = nil
+        copyChatButton.Text = "Copy Chat: OFF"
+        copyChatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        copyChatButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    end
+end)
+
+---------------------------------------------------------
+-- COPY ANIMATION LOGIC
+---------------------------------------------------------
+local copyNinjaActive = false
+local copyTargetPlayer = nil
+local currentCopyTracks = {}
+local myCopyAnimationTracks = {}
+local copyLoopConnection = nil
+
+local function clearMyCopyTracks()
+    local char = player.Character
+    if not char then return end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum then return end
+    for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+        track:Stop()
+    end
+    myCopyAnimationTracks = {}
+end
+
+local function copyAnimationTrack(targetTrack, myHum)
+    local animId = targetTrack.Animation.AnimationId
+    if not animId or animId == "" then return nil end
+    
+    local newAnim = Instance.new("Animation")
+    newAnim.AnimationId = animId
+    local newTrack = myHum:LoadAnimation(newAnim)
+    
+    newTrack.Priority = Enum.AnimationPriority.Action4
+    newTrack.TimePosition = targetTrack.TimePosition
+    
+    if targetTrack.Speed and targetTrack.Speed ~= 1 then
+        newTrack:AdjustSpeed(targetTrack.Speed)
+    end
+    
+    return newTrack
+end
+
+local function copyAnimations()
+    if not copyTargetPlayer then return end
+    local tChar = copyTargetPlayer.Character
+    local myChar = player.Character
+    if not tChar or not myChar then return end
+    local tHum = tChar:FindFirstChild("Humanoid")
+    local myHum = myChar:FindFirstChild("Humanoid")
+    if not tHum or not myHum then return end
+    
+    clearMyCopyTracks()
+    currentCopyTracks = {}
+    myCopyAnimationTracks = {}
+    
+    local targetTracks = tHum:GetPlayingAnimationTracks()
+    for _, track in pairs(targetTracks) do
+        if track.WeightCurrent > 0.1 then
+            local newTrack = copyAnimationTrack(track, myHum)
+            if newTrack then
+                newTrack:Play()
+                table.insert(myCopyAnimationTracks, newTrack)
+                table.insert(currentCopyTracks, {
+                    targetTrack = track,
+                    myTrack = newTrack,
+                    animId = track.Animation.AnimationId
+                })
+            end
+        end
+    end
+    
+    for _, tool in pairs(tChar:GetDescendants()) do
+        if tool:IsA("Tool") or tool:IsA("HopperBin") then
+            for _, animTrack in pairs(tool:GetDescendants()) do
+                if animTrack:IsA("Animation") and animTrack.AnimationId then
+                    local newAnim = Instance.new("Animation")
+                    newAnim.AnimationId = animTrack.AnimationId
+                    local newTrack = myHum:LoadAnimation(newAnim)
+                    newTrack.Priority = Enum.AnimationPriority.Action4
+                    newTrack:Play()
+                    table.insert(myCopyAnimationTracks, newTrack)
+                end
+            end
+        end
+    end
+end
+
+local function updateCopyLoop()
+    if not copyNinjaActive or not copyTargetPlayer then return end
+    local tChar = copyTargetPlayer.Character
+    local myChar = player.Character
+    if not tChar or not myChar then return end
+    local tHum = tChar:FindFirstChild("Humanoid")
+    local myHum = myChar:FindFirstChild("Humanoid")
+    if not tHum or not myHum then return end
+    
+    local currentAnimIds = {}
+    local targetTracks = {}
+    
+    for _, track in pairs(tHum:GetPlayingAnimationTracks()) do
+        if track.WeightCurrent > 0.1 then
+            local id = track.Animation.AnimationId
+            if id and id ~= "" then
+                currentAnimIds[id] = true
+                table.insert(targetTracks, track)
+            end
+        end
+    end
+    
+    for i = #currentCopyTracks, 1, -1 do
+        local ct = currentCopyTracks[i]
+        if not currentAnimIds[ct.animId] then
+            if ct.myTrack then
+                ct.myTrack:Stop()
+            end
+            table.remove(currentCopyTracks, i)
+        end
+    end
+    
+    for _, targetTrack in pairs(targetTracks) do
+        local id = targetTrack.Animation.AnimationId
+        local found = false
+        
+        for _, ct in pairs(currentCopyTracks) do
+            if ct.animId == id then
+                found = true
+                if ct.myTrack then
+                    ct.myTrack.TimePosition = targetTrack.TimePosition
+                    if not ct.myTrack.IsPlaying then
+                        ct.myTrack:Play()
+                    end
+                end
+                break
+            end
+        end
+        
+        if not found then
+            local newTrack = copyAnimationTrack(targetTrack, myHum)
+            if newTrack then
+                newTrack:Play()
+                table.insert(currentCopyTracks, {
+                    targetTrack = targetTrack,
+                    myTrack = newTrack,
+                    animId = id
+                })
+                table.insert(myCopyAnimationTracks, newTrack)
+            end
+        end
+    end
+end
+
+local function startCopyLoop()
+    if copyLoopConnection then
+        copyLoopConnection:Disconnect()
+        copyLoopConnection = nil
+    end
+    copyLoopConnection = RunService.RenderStepped:Connect(function()
+        updateCopyLoop()
+    end)
+end
+
+local function stopCopyLoop()
+    if copyLoopConnection then
+        copyLoopConnection:Disconnect()
+        copyLoopConnection = nil
+    end
+    copyNinjaActive = false
+    copyTargetPlayer = nil
+    clearMyCopyTracks()
+    currentCopyTracks = {}
+end
+
+copyAnimButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    if not copyNinjaActive then
+        local t = getTargetPlayer()
+        if not t then
+            notify("ERROR", "Target Name Likho Pehle!")
+            return
+        end
+        copyTargetPlayer = t
+        copyNinjaActive = true
+        copyAnimations()
+        startCopyLoop()
+        
+        copyAnimButton.Text = "Copy Anim: ON"
+        copyAnimButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+        copyAnimButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        notify("COPY ANIM", "Copying animations of: " .. t.Name)
+    else
+        stopCopyLoop()
+        
+        copyAnimButton.Text = "Copy Anim: OFF"
+        copyAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        copyAnimButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    end
+end)
+
+---------------------------------------------------------
+-- MUTHI EMOTE LOGIC
+---------------------------------------------------------
+local muthiAnimationId = "rbxassetid://698251653"
+local muthiMinTime = 0.48
+local muthiMaxTime = 0.70
+
+local muthiAnimation = Instance.new("Animation")
+muthiAnimation.AnimationId = muthiAnimationId
+
+local muthiTrack = nil
+local muthiLoopConnection = nil
+local isMuthiPlaying = false
+
+local function stopAllAnimations(animator)
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        if track ~= muthiTrack then
+            track:Stop(0)
+        end
+    end
+end
+
+muthiBtn.MouseButton1Click:Connect(function()
+    playTapSound()
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator")
+
+    if not isMuthiPlaying then
+        stopAllAnimations(animator)
+
+        if not muthiTrack then
+            muthiTrack = animator:LoadAnimation(muthiAnimation)
+        end
+
+        muthiTrack.Priority = Enum.AnimationPriority.Action4
+        muthiTrack:Play(0)
+        muthiTrack:AdjustSpeed(2)
+        muthiTrack.TimePosition = muthiMinTime
+
+        muthiLoopConnection = RunService.RenderStepped:Connect(function()
+            if muthiTrack and isMuthiPlaying then
+                stopAllAnimations(animator)
+
+                if muthiTrack.TimePosition >= muthiMaxTime or muthiTrack.TimePosition < muthiMinTime then
+                    muthiTrack.TimePosition = muthiMinTime
+                end
+            end
+        end)
+
+        isMuthiPlaying = true
+        muthiBtn.Text = "Muthi: ON"
+        muthiBtn.TextColor3 = Color3.fromRGB(255, 120, 180)
+        muthiBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+    else
+        if muthiLoopConnection then
+            muthiLoopConnection:Disconnect()
+            muthiLoopConnection = nil
+        end
+        
+        if muthiTrack then
+            muthiTrack:Stop(0)
+        end
+
+        isMuthiPlaying = false
+        muthiBtn.Text = "Muthi: OFF"
+        muthiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        muthiBtn.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    end
+end)
+
+---------------------------------------------------------
+-- ANTI VOID & ANTI-SIT LOGIC
+---------------------------------------------------------
+local voidProtectionEnabled = false
+local antiSitEnabled = false
+local antiSitConnection = nil
+
+voidProtectionBtn.MouseButton1Click:Connect(function()
+    playTapSound()
+    voidProtectionEnabled = not voidProtectionEnabled
+    if voidProtectionEnabled then
+        voidProtectionBtn.Text = "Anti Void: ON"
+        voidProtectionBtn.TextColor3 = Color3.fromRGB(255, 120, 180)
+        voidProtectionBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        workspace.FallenPartsDestroyHeight = -999999
+    else
+        voidProtectionBtn.Text = "Anti Void: OFF"
+        voidProtectionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        voidProtectionBtn.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+        workspace.FallenPartsDestroyHeight = -500
+    end
+end)
+
+antiSitBtn.MouseButton1Click:Connect(function()
+    playTapSound()
+    antiSitEnabled = not antiSitEnabled
+    if antiSitEnabled then
+        antiSitBtn.Text = "Anti Sit: ON"
+        antiSitBtn.TextColor3 = Color3.fromRGB(255, 120, 180)
+        antiSitBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        
+        antiSitConnection = RunService.RenderStepped:Connect(function()
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+                    if hum.Sit then
+                        hum.Sit = false
+                    end
+                end
+            end
+        end)
+    else
+        antiSitBtn.Text = "Anti Sit: OFF"
+        antiSitBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        antiSitBtn.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+        if antiSitConnection then
+            antiSitConnection:Disconnect()
+            antiSitConnection = nil
+        end
+        local char = player.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            end
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- ATTACHED SPAMMER FRAME
+---------------------------------------------------------
+local spammerFrame = Instance.new("Frame")
+spammerFrame.Name = "SpammerFrame"
+spammerFrame.Size = UDim2.new(0, 210, 1, 0)
+spammerFrame.Position = UDim2.new(1, 0, 0, 0)
+spammerFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+spammerFrame.BackgroundTransparency = 0.1
+spammerFrame.BorderSizePixel = 1
+spammerFrame.BorderColor3 = Color3.fromRGB(180, 0, 100)
+spammerFrame.ClipsDescendants = true
+spammerFrame.Visible = false
+spammerFrame.Parent = mainFrame
+
+local spammerCorner = Instance.new("UICorner")
+spammerCorner.CornerRadius = UDim.new(0, 6)
+spammerCorner.Parent = spammerFrame
+
+local spammerTitleBar = Instance.new("Frame")
+spammerTitleBar.Size = UDim2.new(1, 0, 0, 35)
+spammerTitleBar.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
+spammerTitleBar.BackgroundTransparency = 0.05
+spammerTitleBar.BorderSizePixel = 0
+spammerTitleBar.Parent = spammerFrame
+
+local spammerTitle = Instance.new("TextLabel")
+spammerTitle.Size = UDim2.new(1, 0, 1, 0)
+spammerTitle.BackgroundTransparency = 1
+spammerTitle.Text = "CUSTOM SPAM PANEL"
+spammerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+spammerTitle.TextSize = 12
+spammerTitle.Font = Enum.Font.SourceSansBold
+spammerTitle.Parent = spammerTitleBar
+
+local spammerContent = Instance.new("Frame")
+spammerContent.Size = UDim2.new(1, 0, 1, -35)
+spammerContent.Position = UDim2.new(0, 0, 0, 35)
+spammerContent.BackgroundTransparency = 1
+spammerContent.Parent = spammerFrame
+
+local SenderBox = Instance.new("TextBox")
+SenderBox.Parent = spammerContent
+SenderBox.Size = UDim2.new(0, 92, 0, 24)
+SenderBox.Position = UDim2.new(0, 8, 0, 10)
+SenderBox.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+SenderBox.BackgroundTransparency = 0.2
+SenderBox.BorderSizePixel = 1
+SenderBox.BorderColor3 = Color3.fromRGB(180, 0, 100)
+SenderBox.PlaceholderText = "[YOUR NAME]"
+SenderBox.Text = ""
+SenderBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SenderBox.PlaceholderColor3 = Color3.fromRGB(200, 150, 200)
+SenderBox.TextSize = 11
+SenderBox.Font = Enum.Font.SourceSans
+
+local TargetBox = Instance.new("TextBox")
+TargetBox.Parent = spammerContent
+TargetBox.Size = UDim2.new(0, 92, 0, 24)
+TargetBox.Position = UDim2.new(0, 108, 0, 10)
+TargetBox.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+TargetBox.BackgroundTransparency = 0.2
+TargetBox.BorderSizePixel = 1
+TargetBox.BorderColor3 = Color3.fromRGB(180, 0, 100)
+TargetBox.PlaceholderText = "[TARGET NAME]"
+TargetBox.Text = ""
+TargetBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TargetBox.PlaceholderColor3 = Color3.fromRGB(200, 150, 200)
+TargetBox.TextSize = 11
+TargetBox.Font = Enum.Font.SourceSans
+
+local DelayBox = Instance.new("TextBox")
+DelayBox.Parent = spammerContent
+DelayBox.Size = UDim2.new(0, 192, 0, 24)
+DelayBox.Position = UDim2.new(0, 8, 0, 40)
+DelayBox.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+DelayBox.BackgroundTransparency = 0.2
+DelayBox.BorderSizePixel = 1
+DelayBox.BorderColor3 = Color3.fromRGB(180, 0, 100)
+DelayBox.PlaceholderText = "SPEED DELAY"
+DelayBox.Text = "0.5"
+DelayBox.TextColor3 = Color3.fromRGB(255, 150, 200)
+DelayBox.PlaceholderColor3 = Color3.fromRGB(200, 150, 200)
+DelayBox.TextSize = 11
+DelayBox.Font = Enum.Font.SourceSans
+
+local CustomPatternBox = Instance.new("TextBox")
+CustomPatternBox.Parent = spammerContent
+CustomPatternBox.Size = UDim2.new(0, 192, 0, 24)
+CustomPatternBox.Position = UDim2.new(0, 8, 0, 70)
+CustomPatternBox.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+CustomPatternBox.BackgroundTransparency = 0.2
+CustomPatternBox.BorderSizePixel = 1
+CustomPatternBox.BorderColor3 = Color3.fromRGB(180, 0, 100)
+CustomPatternBox.PlaceholderText = "[PATTERN: @@, __, etc.]"
+CustomPatternBox.Text = "@@"
+CustomPatternBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+CustomPatternBox.PlaceholderColor3 = Color3.fromRGB(200, 150, 200)
+CustomPatternBox.TextSize = 11
+CustomPatternBox.Font = Enum.Font.SourceSans
+
+local SpamWords = {
+    "🌌 GALAXY", "☄️ METEOR", "🌟 NOVA", "🛸 ORBIT", "🪐 COSMOS", 
+    "🔮 VOID", "🚀 APEX", "☄️ COMET", "KANEKI💢", "🎆 NEBULA", 
+    "🛰️ ROCKET", "📡 PROBE", "⚡ QUARK", "🌌 MATRIX", "🌀 VORTEX", 
+    "☀️ SOLAR", "🔭 TITAN", "👑 RULER", "🦾 CYBORG", "💥 IMPACT", 
+    "🛡️ SHIELD", "🎯 RADAR", "♀️ AURA", "⚔️ LASER", "🧪 PHRASE", 
+    "💎 STELLAR", "🎭 PHANTOM", "🤫 SILENCE", "🧠 MIND", "💥 PULSAR", 
+    "🔥 FLAME", "🥶 ZERO", "💀 DOOM", "🤖 ROBO", "⚡ SHOCK", 
+    "🦁 ORION", "🦅 CHASER", "🏹 FLIGHT", "🏹 SNIPER", "🏁 WARP"
+}
+
+local StartBtn = Instance.new("TextButton")
+StartBtn.Parent = spammerContent
+StartBtn.Size = UDim2.new(0, 192, 0, 24)
+StartBtn.Position = UDim2.new(0, 8, 0, 98)
+StartBtn.Font = Enum.Font.SourceSansBold
+StartBtn.TextSize = 11
+StartBtn.BorderSizePixel = 1
+StartBtn.BorderColor3 = Color3.fromRGB(180, 0, 100)
+StartBtn.Text = "START SPAM"
+StartBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 80)
+StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local isSpamming = false
+
+local function stopSpamProcess()
+    isSpamming = false
+    StartBtn.Text = "START SPAM"
+    StartBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 80)
+    StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
+
+local function toggleSpam(state)
+    if state == nil then
+        isSpamming = not isSpamming
+    else
+        isSpamming = state
+    end
+
+    if isSpamming then
+        StartBtn.Text = "STOP SPAM"
+        StartBtn.BackgroundColor3 = Color3.fromRGB(220, 0, 80)
+        StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
+        task.spawn(function()
+            while isSpamming do
+                local senderName = SenderBox.Text ~= "" and SenderBox.Text or "ME"
+                local targetName = TargetBox.Text ~= "" and TargetBox.Text or "NOOB"
+                local speed = tonumber(DelayBox.Text) or 0.5
+                local selectedPattern = CustomPatternBox.Text ~= "" and CustomPatternBox.Text or "@@"
+                
+                local selectedWord = SpamWords[math.random(1, #SpamWords)]
+                
+                local processedPayload = buildSpamString(senderName, targetName, selectedWord, selectedPattern)
+                executeChat(processedPayload)
+                
+                task.wait(speed)
+            end
+        end)
+    else
+        stopSpamProcess()
+    end
+end
+
+local function generatePatternString(patternUnit, maxLen)
+    local result = ""
+    local unitLen = string.len(patternUnit)
+    if unitLen == 0 then return "" end
+    while (string.len(result) + unitLen) <= maxLen do
+        result = result .. patternUnit
+    end
+    return result
+end
+
+local function buildSpamString(sender, target, rawWord, patternUnit)
+    local prefix = "SCRIPT BY " .. sender .. " > "
+    local suffix = " [ " .. target .. " ] TMX MI " .. rawWord
+    local staticLength = string.len(prefix) + string.len(suffix)
+    local maxAllowedPatternLength = 195 - staticLength
+    
+    if maxAllowedPatternLength < 0 then
+        return string.sub(prefix .. suffix, 1, 195)
+    end
+    
+    local dynamicPattern = generatePatternString(patternUnit, maxAllowedPatternLength)
+    return string.sub(prefix .. dynamicPattern .. suffix, 1, 195)
+end
+
+StartBtn.MouseButton1Click:Connect(function()
+    playTapSound()
+    toggleSpam()
+end)
+
+---------------------------------------------------------
+-- VIEW LOGIC
+---------------------------------------------------------
+local isViewing = false
+local viewConnection = nil
+
+local function toggleView()
+    isViewing = not isViewing
+    if isViewing then
+        local target = getTargetPlayer()
+        if target and target.Character and target.Character:FindFirstChildOfClass("Humanoid") then
+            viewButton.Text = "Unview"
+            viewButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            viewButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+            camera.CameraSubject = target.Character:FindFirstChildOfClass("Humanoid")
+            
+            viewConnection = target.CharacterRemoving:Connect(function()
+                if isViewing then
+                    toggleView()
+                end
+            end)
+        else
+            isViewing = false
+        end
+    else
+        viewButton.Text = "View Target"
+        viewButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        viewButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+        
+        if viewConnection then
+            viewConnection:Disconnect()
+            viewConnection = nil
+        end
+        
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            camera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
+        end
+    end
+end
+
+viewButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    toggleView()
+end)
+
+---------------------------------------------------------
+-- PURPLE TP LOGIC ENGINE
+---------------------------------------------------------
+local PURPLE_EMOTE_ID = "rbxassetid://78857605924487"
+local purpleAnimation = Instance.new("Animation")
+purpleAnimation.AnimationId = PURPLE_EMOTE_ID
+
+local purpleSound = Instance.new("Sound")
+purpleSound.SoundId = "rbxassetid://74715602103425"
+purpleSound.Volume = 2.5
+purpleSound.Parent = SoundService
+
+local isTeleporting = false
+
+local function spawnPurpleAuraAndSparks(character, posCFrame)
+    if not character then return end
+
+    local auraHighlight = Instance.new("Highlight")
+    auraHighlight.FillColor = Color3.fromRGB(170, 0, 255)
+    auraHighlight.OutlineColor = Color3.fromRGB(255, 100, 255)
+    auraHighlight.FillTransparency = 0.3
+    auraHighlight.OutlineTransparency = 0
+    auraHighlight.Parent = character
+
+    task.spawn(function()
+        for i = 0.3, 1, 0.05 do
+            auraHighlight.FillTransparency = i
+            auraHighlight.OutlineTransparency = i
+            task.wait(0.03)
+        end
+        auraHighlight:Destroy()
+    end)
+
+    local attachmentPart = Instance.new("Part")
+    attachmentPart.Size = Vector3.new(1, 1, 1)
+    attachmentPart.CFrame = posCFrame
+    attachmentPart.Anchored = true
+    attachmentPart.CanCollide = false
+    attachmentPart.Transparency = 1
+    attachmentPart.Parent = workspace
+
+    local sparks = Instance.new("ParticleEmitter")
+    sparks.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 255))
+    })
+    sparks.LightEmission = 1
+    sparks.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 0)})
+    sparks.Lifetime = NumberRange.new(0.2, 0.5)
+    sparks.Speed = NumberRange.new(15, 30)
+    sparks.SpreadAngle = Vector2.new(360, 360)
+    sparks.Rate = 500
+    sparks.Parent = attachmentPart
+
+    local light = Instance.new("PointLight")
+    light.Color = Color3.fromRGB(200, 0, 255)
+    light.Range = 25
+    light.Brightness = 10
+    light.Parent = attachmentPart
+
+    sparks:Emit(80)
+
+    task.wait(0.6)
+    attachmentPart:Destroy()
+end
+
+local function executePurpleTP()
+    if isTeleporting then return end
+
+    local targetPlayer = getTargetPlayer()
+    if not targetPlayer then
+        local searchText = textBox.Text:lower():gsub("%s+", "")
+        if searchText == "" then return end
+
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player then
+                local pName = p.Name:lower()
+                local pDisplayName = p.DisplayName:lower()
+
+                if pName:sub(1, #searchText) == searchText or pDisplayName:sub(1, #searchText) == searchText then
+                    targetPlayer = p
+                    break
+                end
+            end
+        end
+    end
+
+    if targetPlayer and targetPlayer.Character then
+        local myChar = player.Character
+        local targetChar = targetPlayer.Character
+
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local myHumanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+        local targetHead = targetChar:FindFirstChild("Head") or targetChar:FindFirstChild("HumanoidRootPart")
+
+        if myHRP and targetHead and myHumanoid then
+            isTeleporting = true
+
+            local animator = myHumanoid:FindFirstChildOfClass("Animator") or myHumanoid
+
+            for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                if track.Animation.AnimationId == PURPLE_EMOTE_ID then
+                    track:Stop(0)
+                end
+            end
+
+            local animTrack = animator:LoadAnimation(purpleAnimation)
+            animTrack.Looped = false
+
+            animTrack:Play(0.05)
+            animTrack:AdjustSpeed(10)
+            task.wait(0.254)
+
+            animTrack:AdjustSpeed(0.3)
+            task.wait(0.2)
+
+            local targetCFrame = targetHead.CFrame
+            local frontPosition = targetCFrame.Position + (targetCFrame.LookVector * 4)
+            local finalCFrame = CFrame.new(frontPosition, targetCFrame.Position)
+
+            myHRP.CFrame = finalCFrame
+
+            purpleSound:Play()
+            spawnPurpleAuraAndSparks(myChar, finalCFrame)
+
+            animTrack:AdjustSpeed(1)
+            task.wait(0.4)
+
+            animTrack:AdjustSpeed(4)
+            task.wait(0.25)
+
+            animTrack:AdjustSpeed(1)
+
+            animTrack.Stopped:Connect(function()
+                isTeleporting = false
+            end)
+
+            task.delay(2.5, function()
+                isTeleporting = false
+            end)
+        end
+    end
+end
+
+purpleTpButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    executePurpleTP()
+end)
+
+---------------------------------------------------------
+-- ADVANCED ATTACHMENT ENGINE
+---------------------------------------------------------
+local activeConnection = nil
+local activeHeartbeat = nil
+local activePreSim = nil
+local freezeThread = nil
+local slapSoundThread = nil
+local currentTrack = nil
+local currentMode = nil
+local activeTarget = nil
+local savedReturnCFrame = nil
+local glitchState = false
+local suckStartTime = 0
+
+local function getOrientationPart(targetChar)
+    if not targetChar then return nil end
+    return targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("HumanoidRootPart")
+end
+
+local function playSlapSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://134085140066247"
+    sound.Volume = 3.0
+    sound.PlaybackSpeed = 1
+    sound.Parent = SoundService
+    sound:Play()
+    game:GetService("Debris"):AddItem(sound, 2)
+end
+
+local function stopAttachment()
+    if activeConnection then activeConnection:Disconnect() activeConnection = nil end
+    if activeHeartbeat then activeHeartbeat:Disconnect() activeHeartbeat = nil end
+    if activePreSim then activePreSim:Disconnect() activePreSim = nil end
+
+    if freezeThread then
+        task.cancel(freezeThread)
+        freezeThread = nil
+    end
+
+    if slapSoundThread then
+        task.cancel(slapSoundThread)
+        slapSoundThread = nil
+    end
+
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack:Destroy()
+        currentTrack = nil
+    end
+    
+    pcall(function()
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            sethiddenproperty(player.Character.HumanoidRootPart, "PhysicsRepRootPart", nil)
+        end
+    end)
+    
+    if player.Character then
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+            hum.Sit = false
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        end
+        if player.Character:FindFirstChild("Animate") then
+            player.Character.Animate.Disabled = false
+        end
+    end
+
+    if savedReturnCFrame and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = savedReturnCFrame
+        player.Character.HumanoidRootPart.Velocity = Vector3.new()
+        player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new()
+        player.Character.HumanoidRootPart.AssemblyAngularVelocity = Vector3.new()
+        player.Character.HumanoidRootPart.RotVelocity = Vector3.new()
+        savedReturnCFrame = nil
+    end
+
+    if currentMode == "AS" then
+        sideButton.Text = "AS"
+        sideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        sideButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "Fingering" then
+        fingeringButton.Text = "Fingering"
+        fingeringButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fingeringButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    elseif currentMode == "Slap" then
+        slapButton.Text = "Slap"
+        slapButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        slapButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+    end
+
+    currentMode = nil
+    activeTarget = nil
+    glitchState = false
+end
+
+---------------------------------------------------------
+-- SMOOTH UI TOGGLE & DRAG LOGIC
+---------------------------------------------------------
+local isOpen = true
+local isSpammerOpen = false
+
+local function updateButtonAppearance()
+    if not isOpen then
+        csSpammerToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
+        csSpammerToggleBtn.Text = ">"
+    else
+        if isSpammerOpen then
+            csSpammerToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 100)
+            csSpammerToggleBtn.Text = "<"
+        else
+            csSpammerToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 80)
+            csSpammerToggleBtn.Text = ">"
+        end
+    end
+end
+
+local function toggleSpammerUI(state)
+    if not isOpen then return end
+    if state == nil then isSpammerOpen = not isSpammerOpen else isSpammerOpen = state end
+    
+    if isSpammerOpen then
+        spammerFrame.Visible = true
+        spammerFrame.Size = UDim2.new(0, 0, 1, 0)
+        spammerFrame:TweenSize(UDim2.new(0, 210, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.2, true)
+    else
+        spammerFrame:TweenSize(UDim2.new(0, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.2, true, function()
+            if not isSpammerOpen then spammerFrame.Visible = false end
+        end)
+    end
+    updateButtonAppearance()
+end
+
+csSpammerToggleBtn.MouseButton1Click:Connect(function()
+    if not isOpen then return end
+    playTapSound()
+    toggleSpammerUI()
+end)
+
+toggleButton.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    if isOpen then
+        playMenuOpenSound()
+        contentFrame.Visible = true
+        fixedBottomFrame.Visible = true
+        mainFrame:TweenSize(UDim2.new(0, 210, 0, 320), Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.2, true)
+        toggleButton.Text = "Kᴀɴᴇᴋɪ HᴜB  ▲"
+    else
+        playTapSound()
+        dropdownFrame.Visible = false
+        if isSpammerOpen then
+            toggleSpammerUI(false)
+        end
+        mainFrame:TweenSize(UDim2.new(0, 210, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Sine, 0.2, true, function()
+            if not isOpen then 
+                contentFrame.Visible = false 
+                fixedBottomFrame.Visible = false
+            end
+        end)
+        toggleButton.Text = "Kᴀɴᴇᴋɪ HᴜB  ▼"
+    end
+    updateButtonAppearance()
+end)
+
+local function updatePlayerList()
+    for _, child in ipairs(dropdownFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local buttonHeight = 22
+    local count = 0
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            count = count + 1
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, 0, 0, buttonHeight)
+            pBtn.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+            pBtn.BackgroundTransparency = 0.2
+            pBtn.BorderSizePixel = 0
+            pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+            pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            pBtn.TextSize = 10
+            pBtn.Font = Enum.Font.SourceSans
+            pBtn.ZIndex = 11
+            pBtn.Parent = dropdownFrame
+
+            pBtn.MouseButton1Click:Connect(function()
+                textBox.Text = p.Name
+                dropdownFrame.Visible = false
+            end)
+        end
+    end
+    dropdownFrame.CanvasSize = UDim2.new(0, 0, 0, count * buttonHeight)
+end
+
+textBox.Focused:Connect(function()
+    updatePlayerList()
+    dropdownFrame.Visible = true
+end)
+
+local function enableDragging(frame, dragHandle)
+    local dragging, dragStart, startPos, dragInput
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+enableDragging(mainFrame, headerFrame)
+
+---------------------------------------------------------
+-- ATTACHMENT EXECUTION
+---------------------------------------------------------
+local function playEmote(animId, speed, priority)
+    local char = player.Character or player.CharacterAdded:Wait()
+    local humanoid = char:WaitForChild("Humanoid")
+    local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack:Destroy()
+    end
+
+    local animation = Instance.new("Animation")
+    animation.AnimationId = "rbxassetid://" .. tostring(animId)
+
+    currentTrack = animator:LoadAnimation(animation)
+    currentTrack.Priority = priority or Enum.AnimationPriority.Action
+    currentTrack:Play()
+    currentTrack:AdjustSpeed(speed or 1)
+    return currentTrack
+end
+
+local function applyAttachmentLogic()
+    if not currentMode or not activeTarget then return end
+
+    if freezeThread then
+        task.cancel(freezeThread)
+        freezeThread = nil
+    end
+
+    if slapSoundThread then
+        task.cancel(slapSoundThread)
+        slapSoundThread = nil
+    end
+
+    if not savedReturnCFrame and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        savedReturnCFrame = player.Character.HumanoidRootPart.CFrame
+    end
+
+    local animId = "128790445741213"
+    local speed = 1
+
+    if currentMode == "AS" then
+        animId = "77464682913511"
+    elseif currentMode == "FaceBang" then
+        animId = "79952107676081"
+    elseif currentMode == "BOOBS" then
+        animId = "10713966026"
+    elseif currentMode == "Suck" then
+        animId = "13694096724"
+    elseif currentMode == "Fingering" then
+        animId = "124127012123232"
+    elseif currentMode == "Slap" then
+        animId = "123599023212125"
+    elseif currentMode == "Bring" or currentMode == "BringV2" then
+        animId = "95048572625505"
+        speed = 88
+    end
+
+    local track = nil
+    if currentMode == "Suck" then
+        if player.Character and player.Character:FindFirstChild("Animate") then
+            player.Character.Animate.Disabled = true
+        end
+        track = playEmote(animId, 0, Enum.AnimationPriority.Action4)
+        track.TimePosition = 3.4
+        suckStartTime = os.clock()
+    else
+        track = playEmote(animId, speed)
+    end
+
+    if currentMode == "BOOBS" then
+        freezeThread = task.spawn(function()
+            while currentMode == "BOOBS" and track do
+                track.TimePosition = 2.60
+                track:AdjustSpeed(0)
+                RunService.RenderStepped:Wait()
+                track.TimePosition = 2.59
+                track:AdjustSpeed(0)
+                RunService.RenderStepped:Wait()
+            end
+        end)
+    end
+
+    -- SLAP EMOTE SOUND TIMING LOOP
+    if currentMode == "Slap" then
+        slapSoundThread = task.spawn(function()
+            local playedThisLoop = false
+            while currentMode == "Slap" and track do
+                local currentTime = track.TimePosition
+                if currentTime >= 1.10 and not playedThisLoop then
+                    playSlapSound()
+                    playedThisLoop = true
+                elseif currentTime < 1.10 then
+                    playedThisLoop = false
+                end
+                RunService.RenderStepped:Wait()
+            end
+        end)
+    end
+
+    local function updateCFrame()
+        local myChar = player.Character
+        local targetChar = activeTarget.Character
+
+        if myChar and targetChar and myChar:FindFirstChild("HumanoidRootPart") then
+            local myHRP = myChar.HumanoidRootPart
+            local myHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+            local tOrient = getOrientationPart(targetChar)
+
+            if not tOrient or not tOrient:IsDescendantOf(workspace) or (myHumanoid and myHumanoid.Health <= 0) then
+                stopAttachment()
+                return
+            end
+
+            pcall(function()
+                sethiddenproperty(myHRP, "PhysicsRepRootPart", tOrient)
+            end)
+
+            local offset = CFrame.new()
+
+            if currentMode == "AS" then
+                offset = tOrient.CFrame * CFrame.new(0.0, -2.3, 7.0) * CFrame.Angles(math.rad(88), 0, 0)
+            elseif currentMode == "Bang" then
+                offset = tOrient.CFrame * CFrame.new(0, 0.4, 2)
+            elseif currentMode == "FaceBang" then
+                local targetHead = targetChar:FindFirstChild("Head")
+                local baseCFrame = targetHead and targetHead.CFrame or tOrient.CFrame
+                offset = baseCFrame * CFrame.new(0, 1.4, -2.0) * CFrame.Angles(0, math.rad(180), 0)
+            elseif currentMode == "BOOBS" then
+                local targetChest = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso") or tOrient
+                offset = targetChest.CFrame * CFrame.new(0.3, -2.1, -2.9) * CFrame.Angles(0, math.rad(176), 0)
+            elseif currentMode == "Suck" then
+                local timePassed = os.clock() - suckStartTime
+                local oscillation = math.sin(timePassed * 12.5) * 0.4
+                local currentDist = 4 + oscillation
+                local targetCF = tOrient.CFrame
+                local pos = targetCF.Position + (targetCF.LookVector * currentDist) + Vector3.new(0, 0.3, 0)
+                offset = CFrame.lookAt(pos, targetCF.Position) * CFrame.Angles(math.rad(30), 0, 0)
+                if myHumanoid then myHumanoid.PlatformStand = true end
+                if track then track.TimePosition = 3.4 end
+            elseif currentMode == "Fingering" then
+                offset = tOrient.CFrame * CFrame.new(0.0, -0.4, -4.8) * CFrame.Angles(0, math.rad(182), 0)
+            elseif currentMode == "Slap" then
+                offset = tOrient.CFrame * CFrame.new(6.6, -1.3, 0.0) * CFrame.Angles(0, 0, math.rad(-4))
+            elseif currentMode == "Bring" then
+                local targetHRP = targetChar:FindFirstChild("HumanoidRootPart") or tOrient
+                local currentDistance = (myHRP.Position - targetHRP.Position).Magnitude
+                
+                if currentDistance <= 1.0 then
+                    glitchState = not glitchState
+                    if glitchState then
+                        offset = targetHRP.CFrame * CFrame.new(0, -500, 0)
+                    else
+                        offset = targetHRP.CFrame * CFrame.new(0, 0, 0)
+                    end
+                else
+                    offset = targetHRP.CFrame * CFrame.new(0, 0, 0)
+                end
+            elseif currentMode == "BringV2" then
+                local targetHRP = targetChar:FindFirstChild("HumanoidRootPart") or tOrient
+                local currentDistance = (myHRP.Position - targetHRP.Position).Magnitude
+                local flipRotation = CFrame.Angles(math.rad(87), 0, 0)
+                
+                if currentDistance <= 1.0 then
+                    glitchState = not glitchState
+                    if glitchState then
+                        offset = (targetHRP.CFrame * flipRotation) * CFrame.new(0, -500, 0)
+                    else
+                        offset = targetHRP.CFrame * flipRotation
+                    end
+                else
+                    offset = targetHRP.CFrame * flipRotation
+                end
+            end
+
+            myHRP.CFrame = offset
+            myHRP.Velocity = Vector3.new(0, 0, 0)
+            myHRP.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            myHRP.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            myHRP.RotVelocity = Vector3.new(0, 0, 0)
+        end
+    end
+
+    if activeConnection then activeConnection:Disconnect() end
+    if activeHeartbeat then activeHeartbeat:Disconnect() end
+    if activePreSim then activePreSim:Disconnect() end
+
+    activeConnection = RunService.RenderStepped:Connect(updateCFrame)
+    activeHeartbeat = RunService.Heartbeat:Connect(updateCFrame)
+    if currentMode == "Suck" then
+        activePreSim = RunService.PreSimulation:Connect(updateCFrame)
+    end
+end
+
+player.CharacterAdded:Connect(function(newChar)
+    newChar:WaitForChild("Humanoid")
+    newChar:WaitForChild("HumanoidRootPart")
+    
+    if currentMode and activeTarget then
+        task.wait(0.05)
+        applyAttachmentLogic()
+    end
+end)
+
+player.CharacterRemoving:Connect(function()
+    stopAttachment()
+end)
+
+sideButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "AS" and activeTarget == target then
+        stopAttachment()
+        return
+    end
+
+    currentMode = "AS"
+    activeTarget = target
+    sideButton.Text = "UnAS"
+    sideButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    sideButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+    applyAttachmentLogic()
+end)
+
+bangButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "Bang" and activeTarget == target then stopAttachment() return end
+
+    currentMode = "Bang"
+    activeTarget = target
+    applyAttachmentLogic()
+end)
+
+faceBangButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "FaceBang" and activeTarget == target then stopAttachment() return end
+
+    currentMode = "FaceBang"
+    activeTarget = target
+    applyAttachmentLogic()
+end)
+
+pressButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "BOOBS" and activeTarget == target then stopAttachment() return end
+
+    currentMode = "BOOBS"
+    activeTarget = target
+    applyAttachmentLogic()
+end)
+
+suckButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "Suck" and activeTarget == target then stopAttachment() return end
+
+    currentMode = "Suck"
+    activeTarget = target
+    applyAttachmentLogic()
+end)
+
+fingeringButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "Fingering" and activeTarget == target then
+        stopAttachment()
+        return
+    end
+
+    currentMode = "Fingering"
+    activeTarget = target
+    fingeringButton.Text = "UnFingering"
+    fingeringButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    fingeringButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+    applyAttachmentLogic()
+end)
+
+slapButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "Slap" and activeTarget == target then
+        stopAttachment()
+        return
+    end
+
+    currentMode = "Slap"
+    activeTarget = target
+    slapButton.Text = "UnSlap"
+    slapButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+    slapButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+    applyAttachmentLogic()
+end)
+
+bringButton.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "Bring" and activeTarget == target then stopAttachment() return end
+
+    currentMode = "Bring"
+    activeTarget = target
+    applyAttachmentLogic()
+end)
+
+bringV2Button.MouseButton1Click:Connect(function()
+    playTapSound()
+    local target = getTargetPlayer()
+    if not target then stopAttachment() return end
+    if currentMode == "BringV2" and activeTarget == target then stopAttachment() return end
+
+    currentMode = "BringV2"
+    activeTarget = target
+    applyAttachmentLogic()
+end)
+
+---------------------------------------------------------
+-- CHAT COMMAND LISTENER LOGIC
+---------------------------------------------------------
+local function processChatCommand(msgText)
+    local text = string.lower(msgText)
+    local target = getTargetPlayer()
+
+    -- Bring
+    if text == "bring" then
+        if target then
+            currentMode = "Bring"
+            activeTarget = target
+            applyAttachmentLogic()
+        end
+    elseif text == "bring off" or text == "unbring" then
+        if currentMode == "Bring" then stopAttachment() end
+
+    -- Bring V2
+    elseif text == "bringv2" or text == "bring v2" then
+        if target then
+            currentMode = "BringV2"
+            activeTarget = target
+            applyAttachmentLogic()
+        end
+    elseif text == "bringv2 off" or text == "unbringv2" or text == "bring v2 off" then
+        if currentMode == "BringV2" then stopAttachment() end
+
+    -- Bang
+    elseif text == "bang" then
+        if target then
+            currentMode = "Bang"
+            activeTarget = target
+            applyAttachmentLogic()
+        end
+    elseif text == "bang off" or text == "unbang" then
+        if currentMode == "Bang" then stopAttachment() end
+
+    -- FaceBang
+    elseif text == "facebang" or text == "face bang" then
+        if target then
+            currentMode = "FaceBang"
+            activeTarget = target
+            applyAttachmentLogic()
+        end
+    elseif text == "facebang off" or text == "unfacebang" or text == "face bang off" then
+        if currentMode == "FaceBang" then stopAttachment() end
+
+    -- Boobs
+    elseif text == "boobs" then
+        if target then
+            currentMode = "BOOBS"
+            activeTarget = target
+            applyAttachmentLogic()
+        end
+    elseif text == "boobs off" or text == "unboobs" then
+        if currentMode == "BOOBS" then stopAttachment() end
+
+    -- AS
+    elseif text == "as" then
+        if target then
+            currentMode = "AS"
+            activeTarget = target
+            sideButton.Text = "UnAS"
+            sideButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            sideButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+            applyAttachmentLogic()
+        end
+    elseif text == "as off" or text == "unas" then
+        if currentMode == "AS" then stopAttachment() end
+
+    -- Suck
+    elseif text == "suck" then
+        if target then
+            currentMode = "Suck"
+            activeTarget = target
+            applyAttachmentLogic()
+        end
+    elseif text == "suck off" or text == "unsuck" then
+        if currentMode == "Suck" then stopAttachment() end
+
+    -- Fingering
+    elseif text == "fingering" then
+        if target then
+            currentMode = "Fingering"
+            activeTarget = target
+            fingeringButton.Text = "UnFingering"
+            fingeringButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            fingeringButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+            applyAttachmentLogic()
+        end
+    elseif text == "fingering off" or text == "unfingering" then
+        if currentMode == "Fingering" then stopAttachment() end
+
+    -- Slap
+    elseif text == "slap" then
+        if target then
+            currentMode = "Slap"
+            activeTarget = target
+            slapButton.Text = "UnSlap"
+            slapButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            slapButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+            applyAttachmentLogic()
+        end
+    elseif text == "slap off" or text == "unslap" then
+        if currentMode == "Slap" then stopAttachment() end
+
+    -- Spam
+    elseif text == "spam" or text == "spam on" then
+        if not isSpamming then toggleSpam(true) end
+    elseif text == "spam off" or text == "unspam" then
+        if isSpamming then toggleSpam(false) end
+
+    -- Target ESP
+    elseif text == "esp on" or text == "esp" then
+        if target and not targetESPActive then
+            toggleTargetESP(true)
+            targetEspButton.Text = "Target ESP: ON"
+            targetEspButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            targetEspButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        end
+    elseif text == "esp off" or text == "unesp" then
+        if targetESPActive then
+            toggleTargetESP(false)
+            targetEspButton.Text = "Target ESP: OFF"
+            targetEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            targetEspButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+        end
+
+    -- Copy Chat
+    elseif text == "copychat on" or text == "copychat" then
+        if target and not chatSyncActive then
+            chatTargetPlayer = target
+            chatSyncActive = true
+            copyChatButton.Text = "Copy Chat: ON"
+            copyChatButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            copyChatButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        end
+    elseif text == "copychat off" or text == "uncopychat" then
+        if chatSyncActive then
+            chatSyncActive = false
+            chatTargetPlayer = nil
+            copyChatButton.Text = "Copy Chat: OFF"
+            copyChatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            copyChatButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+        end
+
+    -- Copy Anim
+    elseif text == "copyanim on" or text == "copyanim" then
+        if target and not copyNinjaActive then
+            copyTargetPlayer = target
+            copyNinjaActive = true
+            copyAnimations()
+            startCopyLoop()
+            copyAnimButton.Text = "Copy Anim: ON"
+            copyAnimButton.TextColor3 = Color3.fromRGB(255, 120, 180)
+            copyAnimButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
+        end
+    elseif text == "copyanim off" or text == "uncopyanim" then
+        if copyNinjaActive then
+            stopCopyLoop()
+            copyAnimButton.Text = "Copy Anim: OFF"
+            copyAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            copyAnimButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
+        end
+
+    -- View Target
+    elseif text == "view" then
+        if not isViewing then toggleView() end
+    elseif text == "unview" or text == "view off" then
+        if isViewing then toggleView() end
+
+    -- Purple TP
+    elseif text == "tp" or text == "purpletp" then
+        executePurpleTP()
+    end
+end
+
+-- Chat Event Hook for Commands
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    TextChatService.MessageReceived:Connect(function(msg)
+        if msg.TextSource and msg.TextSource.UserId == player.UserId then
+            processChatCommand(msg.Text)
+        end
+    end)
+else
+    player.Chatted:Connect(function(msg)
+        processChatCommand(msg)
+    end)
+end
