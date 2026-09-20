@@ -72,7 +72,7 @@ local function playMenuOpenSound()
 end
 
 ---------------------------------------------------------
--- MAIN CONTAINER & SCREEN GUI SETUP (TOP-RIGHT SPAWN)
+-- MAIN CONTAINER & SCREEN GUI SETUP (TOP-RIGHT SPAWN 4 STUDS UPAR)
 ---------------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "KanekiHubGui"
@@ -82,8 +82,8 @@ screenGui.Parent = parentGui
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 210, 0, 320)
--- Screen ke Top Right kone me spawn hone ke liye CFrame/UDim2 set kiya gaya hai
-mainFrame.Position = UDim2.new(1, -270, 0, 20)
+-- Y-Offset ko 20 se ghata kar 16 kar diya hai (4 studs/pixels UPAR)
+mainFrame.Position = UDim2.new(1, -270, 0, 16)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 1
@@ -97,13 +97,13 @@ mainFrameCorner.CornerRadius = UDim.new(0, 6)
 mainFrameCorner.Parent = mainFrame
 
 ---------------------------------------------------------
--- SEPARATE CIRCULAR KH SIDE BUTTON SETUP (RIGHT SIDE)
+-- SEPARATE CIRCULAR KH SIDE BUTTON SETUP (LEFT SIDE 3 STUDS)
 ---------------------------------------------------------
 local sideKhBtn = Instance.new("TextButton")
 sideKhBtn.Name = "SideKHButton"
 sideKhBtn.Size = UDim2.new(0, 42, 0, 42)
--- Main Frame ke RIGHT side par 8px gap ke sath position
-sideKhBtn.Position = UDim2.new(1, 218, 0, 0)
+-- Main Frame ke LEFT side par 3 studs (pixels) gap par positioning
+sideKhBtn.Position = UDim2.new(0, -45, 0, 0)
 sideKhBtn.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
 sideKhBtn.BackgroundTransparency = 0.1
 sideKhBtn.BorderSizePixel = 1
