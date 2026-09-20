@@ -86,6 +86,29 @@ local mainFrameCorner = Instance.new("UICorner")
 mainFrameCorner.CornerRadius = UDim.new(0, 6)
 mainFrameCorner.Parent = mainFrame
 
+---------------------------------------------------------
+-- SEPARATE CIRCULAR KH SIDE BUTTON SETUP
+---------------------------------------------------------
+local sideKhBtn = Instance.new("TextButton")
+sideKhBtn.Name = "SideKHButton"
+sideKhBtn.Size = UDim2.new(0, 42, 0, 42)
+-- Placed 8px distance away from MainFrame
+sideKhBtn.Position = UDim2.new(0.5, 113, 0.5, -160)
+sideKhBtn.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
+sideKhBtn.BackgroundTransparency = 0.1
+sideKhBtn.BorderSizePixel = 1
+sideKhBtn.BorderColor3 = Color3.fromRGB(180, 0, 100)
+sideKhBtn.Text = "KH"
+sideKhBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+sideKhBtn.TextSize = 14
+sideKhBtn.Font = Enum.Font.SourceSansBold
+sideKhBtn.Active = true
+sideKhBtn.Parent = screenGui
+
+local sideKhCorner = Instance.new("UICorner")
+sideKhCorner.CornerRadius = UDim.new(1, 0) -- Circular UI
+sideKhCorner.Parent = sideKhBtn
+
 local headerFrame = Instance.new("Frame")
 headerFrame.Size = UDim2.new(1, 0, 0, 35)
 headerFrame.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
@@ -134,61 +157,6 @@ csSpammerToggleBtn.Parent = headerFrame
 local csBtnCorner = Instance.new("UICorner")
 csBtnCorner.CornerRadius = UDim.new(0, 4)
 csBtnCorner.Parent = csSpammerToggleBtn
-
----------------------------------------------------------
--- FLOATING BUTTON & DELTA-STYLE COMMAND BAR
----------------------------------------------------------
-local floatBtn = Instance.new("TextButton")
-floatBtn.Name = "KanekiFloatBtn"
-floatBtn.Size = UDim2.new(0, 45, 0, 45)
-floatBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
-floatBtn.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
-floatBtn.BorderSizePixel = 1
-floatBtn.BorderColor3 = Color3.fromRGB(200, 0, 120)
-floatBtn.Text = "K"
-floatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-floatBtn.TextSize = 22
-floatBtn.Font = Enum.Font.SourceSansBold
-floatBtn.Active = true
-floatBtn.Parent = screenGui
-
-local floatCorner = Instance.new("UICorner")
-floatCorner.CornerRadius = UDim.new(1, 0)
-floatCorner.Parent = floatBtn
-
-local floatStroke = Instance.new("UIStroke")
-floatStroke.Color = Color3.fromRGB(255, 0, 128)
-floatStroke.Thickness = 2
-floatStroke.Parent = floatBtn
-
-local cmdBarFrame = Instance.new("Frame")
-cmdBarFrame.Name = "CmdBarFrame"
-cmdBarFrame.Size = UDim2.new(0, 350, 0, 35)
-cmdBarFrame.Position = UDim2.new(0.5, -175, 1, -50)
-cmdBarFrame.BackgroundColor3 = Color3.fromRGB(20, 5, 25)
-cmdBarFrame.BackgroundTransparency = 0.15
-cmdBarFrame.BorderSizePixel = 1
-cmdBarFrame.BorderColor3 = Color3.fromRGB(200, 0, 120)
-cmdBarFrame.Visible = false
-cmdBarFrame.Parent = screenGui
-
-local cmdCorner = Instance.new("UICorner")
-cmdCorner.CornerRadius = UDim.new(0, 8)
-cmdCorner.Parent = cmdBarFrame
-
-local cmdTextBox = Instance.new("TextBox")
-cmdTextBox.Size = UDim2.new(1, -15, 1, 0)
-cmdTextBox.Position = UDim2.new(0, 10, 0, 0)
-cmdTextBox.BackgroundTransparency = 1
-cmdTextBox.Text = ""
-cmdTextBox.PlaceholderText = "Type Command Here (e.g. bring, tp, bang, esp on)..."
-cmdTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-cmdTextBox.PlaceholderColor3 = Color3.fromRGB(180, 130, 190)
-cmdTextBox.TextSize = 13
-cmdTextBox.Font = Enum.Font.SourceSansBold
-cmdTextBox.TextXAlignment = Enum.TextXAlignment.Left
-cmdTextBox.ClearTextOnFocus = true
-cmdTextBox.Parent = cmdBarFrame
 
 ---------------------------------------------------------
 -- SCROLLABLE TROLL CONTENT FRAME
@@ -1074,13 +1042,10 @@ local function buildSpamString(sender, target, rawWord, patternUnit)
     return string.sub(prefix .. dynamicPattern .. suffix, 1, 195)
 end
 
-local function toggleSpam(state)
-    if state == nil then
-        isSpamming = not isSpamming
-    else
-        isSpamming = state
-    end
-
+StartBtn.MouseButton1Click:Connect(function()
+    playTapSound()
+    isSpamming = not isSpamming
+    
     if isSpamming then
         StartBtn.Text = "STOP SPAM"
         StartBtn.BackgroundColor3 = Color3.fromRGB(220, 0, 80)
@@ -1104,11 +1069,6 @@ local function toggleSpam(state)
     else
         stopSpamProcess()
     end
-end
-
-StartBtn.MouseButton1Click:Connect(function()
-    playTapSound()
-    toggleSpam()
 end)
 
 ---------------------------------------------------------
@@ -1530,8 +1490,9 @@ local function enableDragging(frame, dragHandle)
     end)
 end
 
+-- Enable independent dragging for both Main Frame and Side Circle KH Button
 enableDragging(mainFrame, headerFrame)
-enableDragging(floatBtn, floatBtn)
+enableDragging(sideKhBtn, sideKhBtn)
 
 ---------------------------------------------------------
 -- ATTACHMENT EXECUTION
@@ -1618,6 +1579,7 @@ local function applyAttachmentLogic()
         end)
     end
 
+    -- SLAP EMOTE SOUND TIMING LOOP
     if currentMode == "Slap" then
         slapSoundThread = task.spawn(function()
             local playedThisLoop = false
@@ -1858,211 +1820,3 @@ bringV2Button.MouseButton1Click:Connect(function()
     activeTarget = target
     applyAttachmentLogic()
 end)
-
----------------------------------------------------------
--- CHAT & FLOATING COMMAND LISTENER LOGIC
----------------------------------------------------------
-local function processChatCommand(msgText)
-    local text = string.lower(msgText)
-    local target = getTargetPlayer()
-
-    -- Bring
-    if text == "bring" then
-        if target then
-            currentMode = "Bring"
-            activeTarget = target
-            applyAttachmentLogic()
-        end
-    elseif text == "bring off" or text == "unbring" then
-        if currentMode == "Bring" then stopAttachment() end
-
-    -- Bring V2
-    elseif text == "bringv2" or text == "bring v2" then
-        if target then
-            currentMode = "BringV2"
-            activeTarget = target
-            applyAttachmentLogic()
-        end
-    elseif text == "bringv2 off" or text == "unbringv2" or text == "bring v2 off" then
-        if currentMode == "BringV2" then stopAttachment() end
-
-    -- Bang
-    elseif text == "bang" then
-        if target then
-            currentMode = "Bang"
-            activeTarget = target
-            applyAttachmentLogic()
-        end
-    elseif text == "bang off" or text == "unbang" then
-        if currentMode == "Bang" then stopAttachment() end
-
-    -- FaceBang
-    elseif text == "facebang" or text == "face bang" then
-        if target then
-            currentMode = "FaceBang"
-            activeTarget = target
-            applyAttachmentLogic()
-        end
-    elseif text == "facebang off" or text == "unfacebang" or text == "face bang off" then
-        if currentMode == "FaceBang" then stopAttachment() end
-
-    -- Boobs
-    elseif text == "boobs" then
-        if target then
-            currentMode = "BOOBS"
-            activeTarget = target
-            applyAttachmentLogic()
-        end
-    elseif text == "boobs off" or text == "unboobs" then
-        if currentMode == "BOOBS" then stopAttachment() end
-
-    -- AS
-    elseif text == "as" then
-        if target then
-            currentMode = "AS"
-            activeTarget = target
-            sideButton.Text = "UnAS"
-            sideButton.TextColor3 = Color3.fromRGB(255, 120, 180)
-            sideButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
-            applyAttachmentLogic()
-        end
-    elseif text == "as off" or text == "unas" then
-        if currentMode == "AS" then stopAttachment() end
-
-    -- Suck
-    elseif text == "suck" then
-        if target then
-            currentMode = "Suck"
-            activeTarget = target
-            applyAttachmentLogic()
-        end
-    elseif text == "suck off" or text == "unsuck" then
-        if currentMode == "Suck" then stopAttachment() end
-
-    -- Fingering
-    elseif text == "fingering" then
-        if target then
-            currentMode = "Fingering"
-            activeTarget = target
-            fingeringButton.Text = "UnFingering"
-            fingeringButton.TextColor3 = Color3.fromRGB(255, 120, 180)
-            fingeringButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
-            applyAttachmentLogic()
-        end
-    elseif text == "fingering off" or text == "unfingering" then
-        if currentMode == "Fingering" then stopAttachment() end
-
-    -- Slap
-    elseif text == "slap" then
-        if target then
-            currentMode = "Slap"
-            activeTarget = target
-            slapButton.Text = "UnSlap"
-            slapButton.TextColor3 = Color3.fromRGB(255, 120, 180)
-            slapButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
-            applyAttachmentLogic()
-        end
-    elseif text == "slap off" or text == "unslap" then
-        if currentMode == "Slap" then stopAttachment() end
-
-    -- Spam
-    elseif text == "spam" or text == "spam on" then
-        if not isSpamming then toggleSpam(true) end
-    elseif text == "spam off" or text == "unspam" then
-        if isSpamming then toggleSpam(false) end
-
-    -- Target ESP
-    elseif text == "esp on" or text == "esp" then
-        if target and not targetESPActive then
-            toggleTargetESP(true)
-            targetEspButton.Text = "Target ESP: ON"
-            targetEspButton.TextColor3 = Color3.fromRGB(255, 120, 180)
-            targetEspButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
-        end
-    elseif text == "esp off" or text == "unesp" then
-        if targetESPActive then
-            toggleTargetESP(false)
-            targetEspButton.Text = "Target ESP: OFF"
-            targetEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            targetEspButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
-        end
-
-    -- Copy Chat
-    elseif text == "copychat on" or text == "copychat" then
-        if target and not chatSyncActive then
-            chatTargetPlayer = target
-            chatSyncActive = true
-            copyChatButton.Text = "Copy Chat: ON"
-            copyChatButton.TextColor3 = Color3.fromRGB(255, 120, 180)
-            copyChatButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
-        end
-    elseif text == "copychat off" or text == "uncopychat" then
-        if chatSyncActive then
-            chatSyncActive = false
-            chatTargetPlayer = nil
-            copyChatButton.Text = "Copy Chat: OFF"
-            copyChatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            copyChatButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
-        end
-
-    -- Copy Anim
-    elseif text == "copyanim on" or text == "copyanim" then
-        if target and not copyNinjaActive then
-            copyTargetPlayer = target
-            copyNinjaActive = true
-            copyAnimations()
-            startCopyLoop()
-            copyAnimButton.Text = "Copy Anim: ON"
-            copyAnimButton.TextColor3 = Color3.fromRGB(255, 120, 180)
-            copyAnimButton.BackgroundColor3 = Color3.fromRGB(120, 0, 80)
-        end
-    elseif text == "copyanim off" or text == "uncopyanim" then
-        if copyNinjaActive then
-            stopCopyLoop()
-            copyAnimButton.Text = "Copy Anim: OFF"
-            copyAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            copyAnimButton.BackgroundColor3 = Color3.fromRGB(45, 0, 50)
-        end
-
-    -- View Target
-    elseif text == "view" then
-        if not isViewing then toggleView() end
-    elseif text == "unview" or text == "view off" then
-        if isViewing then toggleView() end
-
-    -- Purple TP
-    elseif text == "tp" or text == "purpletp" then
-        executePurpleTP()
-    end
-end
-
----------------------------------------------------------
--- FLOATING BUTTON TOGGLE & COMMAND BAR FOCUS LOGIC
----------------------------------------------------------
-floatBtn.MouseButton1Click:Connect(function()
-    playTapSound()
-    cmdBarFrame.Visible = not cmdBarFrame.Visible
-    if cmdBarFrame.Visible then
-        cmdTextBox:CaptureFocus()
-    end
-end)
-
-cmdTextBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed and cmdTextBox.Text ~= "" then
-        processChatCommand(cmdTextBox.Text)
-        cmdTextBox.Text = ""
-    end
-end)
-
--- Chat Event Hook for Commands
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    TextChatService.MessageReceived:Connect(function(msg)
-        if msg.TextSource and msg.TextSource.UserId == player.UserId then
-            processChatCommand(msg.Text)
-        end
-    end)
-else
-    player.Chatted:Connect(function(msg)
-        processChatCommand(msg)
-    end)
-end
