@@ -8,6 +8,15 @@ local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 
+---------------------------------------------------------
+-- AUTO-DESTROY OLD SCRIPT INSTANCE
+---------------------------------------------------------
+local parentGui = game.CoreGui or Players.LocalPlayer:WaitForChild("PlayerGui")
+local oldGui = parentGui:FindFirstChild("KanekiHubGui")
+if oldGui then
+    oldGui:Destroy()
+end
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local camera = Workspace.CurrentCamera
@@ -63,17 +72,18 @@ local function playMenuOpenSound()
 end
 
 ---------------------------------------------------------
--- MAIN CONTAINER & SCREEN GUI SETUP
+-- MAIN CONTAINER & SCREEN GUI SETUP (TOP-RIGHT SPAWN)
 ---------------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "KanekiHubGui"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = game.CoreGui or playerGui
+screenGui.Parent = parentGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 210, 0, 320)
-mainFrame.Position = UDim2.new(0.5, -105, 0.5, -160)
+-- Screen ke Top Right kone me spawn hone ke liye CFrame/UDim2 set kiya gaya hai
+mainFrame.Position = UDim2.new(1, -270, 0, 20)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 1
@@ -87,13 +97,13 @@ mainFrameCorner.CornerRadius = UDim.new(0, 6)
 mainFrameCorner.Parent = mainFrame
 
 ---------------------------------------------------------
--- SEPARATE CIRCULAR KH SIDE BUTTON SETUP
+-- SEPARATE CIRCULAR KH SIDE BUTTON SETUP (RIGHT SIDE)
 ---------------------------------------------------------
 local sideKhBtn = Instance.new("TextButton")
 sideKhBtn.Name = "SideKHButton"
 sideKhBtn.Size = UDim2.new(0, 42, 0, 42)
--- Placed 8px distance away from MainFrame
-sideKhBtn.Position = UDim2.new(0.5, 113, 0.5, -160)
+-- Main Frame ke RIGHT side par 8px gap ke sath position
+sideKhBtn.Position = UDim2.new(1, 218, 0, 0)
 sideKhBtn.BackgroundColor3 = Color3.fromRGB(35, 0, 45)
 sideKhBtn.BackgroundTransparency = 0.1
 sideKhBtn.BorderSizePixel = 1
@@ -103,7 +113,7 @@ sideKhBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 sideKhBtn.TextSize = 14
 sideKhBtn.Font = Enum.Font.SourceSansBold
 sideKhBtn.Active = true
-sideKhBtn.Parent = screenGui
+sideKhBtn.Parent = mainFrame
 
 local sideKhCorner = Instance.new("UICorner")
 sideKhCorner.CornerRadius = UDim.new(1, 0) -- Circular UI
